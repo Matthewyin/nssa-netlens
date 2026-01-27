@@ -962,18 +962,7 @@ class PcapAnalyzer:
         # Format result
         session_list = []
         for sid, data in streams.items():
-            # Generate Expert Advice
-            advice = []
             counts = data["anomaly_counts"]
-
-            if counts["Zero Window"] > 0:
-                advice.append("⚠️ 接收端处理积压 (Zero Window)，应用层性能瓶颈。")
-            if counts["Retransmission"] > 10 or counts["Fast Retransmission"] > 10:
-                advice.append("🔴 严重丢包 (Retransmission)，检查物理链路或拥塞。")
-            if counts["Out-of-Order"] > 5:
-                advice.append("⚠️ 乱序到达 (Out-of-Order)，路由抖动或多路径传输。")
-            if counts["Reset"] > 0:
-                advice.append("🚫 连接强制中断 (RST)，可能被防火墙拦截或服务崩溃。")
 
             session_list.append(
                 {
@@ -981,7 +970,6 @@ class PcapAnalyzer:
                     "src": f"{data['src_ip']}:{data['src_port']}",
                     "dst": f"{data['dst_ip']}:{data['dst_port']}",
                     "anomaly_summary": dict(counts),
-                    "advice": " ".join(advice) or "常规网络抖动。",
                     "events_count": len(data["events"]),
                     "events": data["events"],
                 }

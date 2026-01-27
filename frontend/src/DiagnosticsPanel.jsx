@@ -77,9 +77,6 @@ function DiagnosticsPanel({ data, filePath }) {
                   <div className="diag-detail-title" style={{color: 'var(--text-primary)'}}>
                     Session #{selectedSession.stream_id}: {selectedSession.src} ↔ {selectedSession.dst}
                   </div>
-                  <div className="diag-detail-advice">
-                    {selectedSession.advice}
-                  </div>
                 </div>
 
                 <SequenceDiagram 

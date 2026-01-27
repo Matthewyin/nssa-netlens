@@ -155,14 +155,7 @@
   font-family: 'SF Mono', 'Menlo', monospace;
 }
 
-.diag-detail-advice {
-  font-size: 13px;
-  color: var(--text-secondary);
-  background: var(--bg-tertiary);
-  padding: 10px;
-  border-radius: 6px;
-  border-left: 3px solid var(--accent-blue);
-}
+
 
 .diag-sidebar::-webkit-scrollbar,
 .diag-content::-webkit-scrollbar {

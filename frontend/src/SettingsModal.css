@@ -15,7 +15,7 @@
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  width: 500px;
+  width: 550px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
 }
 
@@ -45,6 +45,23 @@
 
 .modal-body {
   padding: 20px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.setting-section {
+  margin-bottom: 24px;
+}
+
+.section-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-blue);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 8px;
 }
 
 .setting-item {
@@ -64,7 +81,7 @@
   gap: 8px;
 }
 
-.input-group input {
+.input-group input, .text-input {
   flex: 1;
   background: var(--bg-tertiary);
   border: 1px solid var(--border-color);
@@ -72,6 +89,12 @@
   padding: 8px 12px;
   color: var(--text-primary);
   font-size: 13px;
+  width: 100%;
+  outline: none;
+}
+
+.input-group input:focus, .text-input:focus {
+  border-color: var(--accent-blue);
 }
 
 .btn-secondary {
@@ -82,6 +105,7 @@
   color: var(--text-secondary);
   font-size: 13px;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .btn-secondary:hover {
@@ -124,4 +148,69 @@
 
 .btn-save:hover {
   background: var(--accent-blue-hover);
+}
+
+.verify-success {
+  color: #22c55e;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.verify-error {
+  color: #ef4444;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.save-status {
+  font-size: 12px;
+  font-weight: 500;
+  margin-left: 10px;
+}
+
+.status-saved { color: #22c55e; }
+.status-saving { color: #f59e0b; }
+.status-error { color: #ef4444; }
+
+.profile-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.btn-icon {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+  padding: 0;
+}
+
+.btn-icon:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.btn-icon.danger:hover {
+  border-color: #ef4444;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.1);
+}
+
+.btn-icon svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
 }

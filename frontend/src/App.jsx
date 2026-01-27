@@ -7,6 +7,7 @@ import DnsPanel from './DnsPanel';
 import TlsPanel from './TlsPanel';
 import CorrelationPanel from './CorrelationPanel';
 import SearchBar from './SearchBar';
+import AiChatSidebar from './AiChatSidebar';
 
 const ANALYSIS_TYPES = [
   { id: 'pcap_summary', label: '概览分析', icon: '📊' },
@@ -179,6 +180,7 @@ function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isAiOpen, setIsAiOpen] = useState(false);
 
   useEffect(() => {
     const handleWheel = (e) => {
@@ -603,6 +605,11 @@ function App() {
             <span>⚙️</span>
             {isSidebarOpen && <span>设置</span>}
           </button>
+          
+          <button className="btn-settings" onClick={() => setIsAiOpen(true)} title={!isSidebarOpen ? "AI 分析师" : ""}>
+            <span>🤖</span>
+            {isSidebarOpen && <span>AI 分析师</span>}
+          </button>
         </div>
 
         <div className="main-panel">
@@ -649,6 +656,7 @@ function App() {
         </div>
       </div>
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      <AiChatSidebar isOpen={isAiOpen} onClose={() => setIsAiOpen(false)} filePath={selectedFiles[0]} />
     </div>
   );
 }
