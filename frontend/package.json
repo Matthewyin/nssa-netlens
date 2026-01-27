@@ -1,0 +1,57 @@
+{
+  "name": "netlens",
+  "version": "0.1.0",
+  "description": "Network Traffic Analysis & Visualization Tool",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "concurrently \"npm:dev:react\" \"npm:dev:electron\"",
+    "dev:react": "vite",
+    "dev:electron": "wait-on http://localhost:5173 && electron .",
+    "build": "vite build && electron-builder",
+    "build:mac": "vite build && electron-builder --mac",
+    "preview": "vite preview"
+  },
+  "keywords": ["pcap", "wireshark", "network-analysis", "electron"],
+  "author": "NetLens Team",
+  "license": "MIT",
+  "dependencies": {
+    "electron-store": "^8.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.1",
+    "concurrently": "^8.2.2",
+    "electron": "^28.2.0",
+    "electron-builder": "^24.9.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "vite": "^5.0.12",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "io.nssa.netlens",
+    "productName": "NetLens",
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": ["dmg"],
+      "icon": "build/icon.icns"
+    },
+    "dmg": {
+      "title": "NetLens Installer",
+      "icon": "build/icon.icns"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../backend/dist/pcap-server",
+        "to": "python-backend/server"
+      }
+    ],
+    "directories": {
+      "output": "release"
+    }
+  }
+}

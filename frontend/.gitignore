@@ -1,0 +1,8 @@
+node_modules
+dist
+python-backend/venv
+python-backend/__pycache__
+*.log
+.DS_Store
+*.dmg
+*.zip

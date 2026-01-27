@@ -1,0 +1,13 @@
+node_modules/
+.venv/
+__pycache__/
+dist/
+release/
+build/
+analysis_reports/
+aaa/
+tests/*.pcap
+tests/*.pcapng
+test.pcapng
+.DS_Store
+.env

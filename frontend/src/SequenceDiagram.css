@@ -1,0 +1,61 @@
+.seq-container {
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  padding: 20px;
+  overflow-x: auto;
+  font-family: 'SF Mono', 'Menlo', monospace;
+  margin-top: 16px;
+  border: 1px solid var(--border-color);
+}
+
+.seq-svg {
+  display: block;
+  margin: 0 auto;
+}
+
+.seq-svg text {
+  fill: var(--text-muted);
+  font-size: 11px;
+}
+
+.seq-host-label {
+  font-weight: 600;
+  fill: var(--text-primary);
+  font-size: 12px;
+}
+
+.seq-line {
+  stroke: var(--border-color);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+}
+
+.seq-arrow {
+  stroke-width: 1.5;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.seq-arrow:hover {
+  stroke-width: 3;
+}
+
+.seq-arrow-bg {
+  stroke: transparent;
+  stroke-width: 10; /* Invisible hit area */
+  cursor: pointer;
+}
+
+.seq-label {
+  font-size: 10px;
+  fill: var(--text-muted);
+  cursor: pointer;
+  pointer-events: none; /* Let clicks pass to arrow */
+}
+
+/* Colors */
+.color-retransmission { stroke: #ef4444; fill: #ef4444; }
+.color-reset { stroke: #d946ef; fill: #d946ef; }
+.color-dup { stroke: #eab308; fill: #eab308; }
+.color-window { stroke: #f97316; fill: #f97316; }
+.color-normal { stroke: var(--accent-blue); fill: var(--accent-blue); }
