@@ -61,7 +61,7 @@
       }
     ],
     "directories": {
-      "output": "release"
+      "output": "../release/v${version}"
     }
   }
 }
