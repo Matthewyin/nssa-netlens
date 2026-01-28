@@ -23,18 +23,18 @@ NetLens 采用现代化的混合架构，兼顾了前端的灵活性与后端的
 
 ```mermaid
 graph TD
-    User[用户] -->|交互| UI[Electron + React 前端]
-    UI -->|IPC 通信| Main[Electron 主进程]
+    User["用户"] -->|交互| UI["Electron + React 前端"]
+    UI -->|IPC 通信| Main["Electron 主进程"]
     
     subgraph "AI 智能体 (Agent Runtime)"
-        Main -->|Prompt + Tools| LLM[大模型 (OpenAI/DeepSeek)]
-        LLM -->|Function Call| Main
+        Main -->|"Prompt + Tools"| LLM["大模型 (OpenAI/DeepSeek)"]
+        LLM -->|"Function Call"| Main
     end
     
     subgraph "分析引擎 (Analysis Engine)"
-        Main -->|Spawn| Python[Python 后端]
-        Python -->|Stream/JSON| Tshark[Wireshark CLI (Tshark)]
-        Tshark -->|Raw Packets| File[(PCAP 文件)]
+        Main -->|Spawn| Python["Python 后端"]
+        Python -->|"Stream/JSON"| Tshark["Wireshark CLI (Tshark)"]
+        Tshark -->|"Raw Packets"| File[("PCAP 文件")]
     end
 ```
 
