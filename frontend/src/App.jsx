@@ -8,6 +8,7 @@ import TlsPanel from './TlsPanel';
 import CorrelationPanel from './CorrelationPanel';
 import SearchBar from './SearchBar';
 import AiChatSidebar from './AiChatSidebar';
+import logo from './assets/icon.svg';
 
 const ANALYSIS_TYPES = [
   { id: 'pcap_summary', label: '概览分析', icon: '📊' },
@@ -548,7 +549,7 @@ function App() {
       <div className="content">
         <div className={`sidebar ${isSidebarOpen ? '' : 'collapsed'}`}>
           <div className="sidebar-brand" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px', height: '60px' }}>
-             <img src="/icon.svg" alt="Logo" style={{ width: '28px', height: '28px' }} />
+             <img src={logo} alt="Logo" style={{ width: '28px', height: '28px' }} />
              {isSidebarOpen && <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>NetLens</span>}
           </div>
 
@@ -656,7 +657,7 @@ function App() {
         </div>
       </div>
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
-      <AiChatSidebar isOpen={isAiOpen} onClose={() => setIsAiOpen(false)} filePath={selectedFiles[0]} />
+      <AiChatSidebar isOpen={isAiOpen} onClose={() => setIsAiOpen(false)} filePaths={selectedFiles} />
     </div>
   );
 }

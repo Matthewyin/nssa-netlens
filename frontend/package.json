@@ -1,6 +1,6 @@
 {
   "name": "netlens",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Network Traffic Analysis & Visualization Tool",
   "main": "electron/main.js",
   "scripts": {

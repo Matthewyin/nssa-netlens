@@ -315,7 +315,7 @@ ipcMain.handle('get-packet-details', async (event, filePath, frameNumber) => {
   });
 });
 
-ipcMain.handle('analyze-correlation', async (event, file1, file2) => {
+const handleAnalyzeCorrelation = async (file1, file2) => {
   return new Promise((resolve, reject) => {
     const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
     
@@ -367,6 +367,10 @@ ipcMain.handle('analyze-correlation', async (event, file1, file2) => {
       }
     });
   });
+};
+
+ipcMain.handle('analyze-correlation', async (event, file1, file2) => {
+  return await handleAnalyzeCorrelation(file1, file2);
 });
 
 ipcMain.handle('copy-to-clipboard', (event, text) => {
@@ -459,6 +463,21 @@ ipcMain.handle('ask-ai', async (event, message, filePath) => {
             required: ["filepath"]
           }
         }
+      },
+      {
+        type: "function",
+        function: {
+          name: "analyze_correlation",
+          description: "Correlate packets between two PCAP files to find matches, latency, and packet loss",
+          parameters: {
+            type: "object",
+            properties: {
+              file_a: { type: "string", description: "Path to the first pcap file" },
+              file_b: { type: "string", description: "Path to the second pcap file" }
+            },
+            required: ["file_a", "file_b"]
+          }
+        }
       }
     ];
 
@@ -468,13 +487,15 @@ ipcMain.handle('ask-ai', async (event, message, filePath) => {
         parameters: t.function.parameters
     }));
 
+    const fileInfo = Array.isArray(filePath) ? filePath.join(', ') : (filePath || 'No file selected');
+
     const systemPrompt = `You are NetLens AI, a specialized Network Packet Analysis Expert.
     Your goal is to help users understand, troubleshoot, and secure their network traffic by analyzing PCAP files.
     
-    Current Analysis File: ${filePath || 'No file selected'}
+    Current Analysis File(s): ${fileInfo}
     
     You have access to a powerful set of analysis tools (via Tshark backend).
-    You can query summaries, inspect specific protocols (HTTP/DNS/TLS), diagnose TCP anomalies, and scan for security threats.
+    You can query summaries, inspect specific protocols (HTTP/DNS/TLS), diagnose TCP anomalies, scan for security threats, and correlate flows between two files.
     
     [TOOL USE INSTRUCTIONS]
     You have the following tools available:
@@ -584,12 +605,19 @@ ipcMain.handle('ask-ai', async (event, message, filePath) => {
             
             console.log(`AI calling tool: ${functionName}`);
             
-            let analysisType = functionName;
-            if (functionName === 'get_pcap_summary') analysisType = 'pcap_summary';
-            if (functionName === 'scan_security_threats') analysisType = 'security_scan';
-            if (functionName === 'analyze_tcp_anomalies') analysisType = 'tcp_anomalies';
+            let result;
+            if (functionName === 'analyze_correlation') {
+                 result = await handleAnalyzeCorrelation(functionArgs.file_a, functionArgs.file_b);
+            } else {
+                let analysisType = functionName;
+                if (functionName === 'get_pcap_summary') analysisType = 'pcap_summary';
+                if (functionName === 'scan_security_threats') analysisType = 'security_scan';
+                if (functionName === 'analyze_tcp_anomalies') analysisType = 'tcp_anomalies';
 
-            const result = await handleAnalyzePcap(functionArgs.filepath || filePath, analysisType, "");
+                // Use provided filepath or default to first selected file
+                const targetFile = functionArgs.filepath || (Array.isArray(filePath) ? filePath[0] : filePath);
+                result = await handleAnalyzePcap(targetFile, analysisType, "");
+            }
             
             if (responseMessage.tool_calls) {
                 messages.push({

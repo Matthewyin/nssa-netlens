@@ -188,11 +188,6 @@
   display: flex;
   justify-content: flex-end;
   padding: 0 4px;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.ai-message:hover .ai-message-footer {
   opacity: 1;
 }
 
