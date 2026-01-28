@@ -119,13 +119,15 @@ class TsharkManager:
         import csv
 
         # Use Popen to stream stdout
-        with subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, text=True, bufsize=1
-        ) as proc:
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, text=True, bufsize=1)
+        try:
             if proc.stdout:
                 reader = csv.DictReader(proc.stdout)
                 for row in reader:
                     yield row
+        finally:
+            proc.kill()
+            proc.wait()
 
 
 # Global instance

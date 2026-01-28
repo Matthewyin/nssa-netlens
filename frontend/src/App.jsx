@@ -8,6 +8,7 @@ import TlsPanel from './TlsPanel';
 import CorrelationPanel from './CorrelationPanel';
 import SearchBar from './SearchBar';
 import AiChatSidebar from './AiChatSidebar';
+import PacketDetailTree from './PacketDetailTree';
 import logo from './assets/icon.svg';
 
 const ANALYSIS_TYPES = [
@@ -119,55 +120,121 @@ function TrafficTimeline({ data }) {
   );
 }
 
-function TcpSessionCard({ session }) {
-  const [viewMode, setViewMode] = useState('ascii');
+function TcpSessionCard({ session, filePath }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [packetList, setPacketList] = useState([]);
+  const [page, setPage] = useState(1);
+  const [loadingList, setLoadingList] = useState(false);
+  const [selectedPacket, setSelectedPacket] = useState(null);
+  const [packetDetails, setPacketDetails] = useState(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+
+  const loadPackets = async (pageNum) => {
+    setLoadingList(true);
+    try {
+      const res = await window.electronAPI.getTcpStreamPackets(filePath, session.session_id, pageNum);
+      if (res && res.packets) {
+        setPacketList(res.packets);
+        setPage(pageNum);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingList(false);
+    }
+  };
+
+  const toggleExpand = () => {
+    if (!isExpanded && packetList.length === 0) {
+      loadPackets(1);
+    }
+    setIsExpanded(!isExpanded);
+  };
+
+  const handlePacketClick = async (pkt) => {
+    setSelectedPacket(pkt);
+    setLoadingDetail(true);
+    try {
+      const details = await window.electronAPI.getPacketDetails(filePath, pkt['frame.number']);
+      setPacketDetails(details);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingDetail(false);
+    }
+  };
 
   return (
-    <div className="session-card">
-      <div className="session-header">
+    <div className="session-card" style={{padding: 0, overflow: 'hidden'}}>
+      <div 
+        className="session-header" 
+        onClick={toggleExpand} 
+        style={{padding: '16px', cursor: 'pointer', background: isExpanded ? 'var(--bg-tertiary)' : 'transparent', borderBottom: isExpanded ? '1px solid var(--border-color)' : 'none'}}
+      >
         <div className="session-title">
+          <span className="proto-tag" style={{background: '#3b82f6', color: 'white', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', marginRight: '8px'}}>
+            {session.protocol || 'TCP'}
+          </span>
           <span className="talker-ip">{session.src_ip}:{session.src_port}</span>
           <span className="session-arrow">↔</span>
           <span className="talker-ip">{session.dst_ip}:{session.dst_port}</span>
         </div>
         <div className="session-meta">
-          <span>{session.packet_count} 包</span>
+          <span>{session.packet_count} Pkts</span>
           <span className="meta-sep">·</span>
           <span>{formatBytes(session.byte_count)}</span>
           <span className="meta-sep">·</span>
           <span>{session.duration}s</span>
+          <span style={{marginLeft: 'auto', display: 'inline-block', transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s'}}>▼</span>
         </div>
       </div>
       
-      <div className="payload-box">
-        <div className="payload-tabs" style={{marginBottom: '8px', display: 'flex', gap: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px'}}>
-           <span 
-             onClick={() => setViewMode('ascii')}
-             style={{
-               fontWeight: viewMode === 'ascii' ? 'bold' : 'normal',
-               color: viewMode === 'ascii' ? 'var(--accent-blue)' : 'var(--text-muted)',
-               cursor: 'pointer',
-               fontSize: '11px',
-               paddingBottom: '2px',
-               borderBottom: viewMode === 'ascii' ? '2px solid var(--accent-blue)' : 'none'
-             }}
-           >ASCII</span>
-           <span 
-             onClick={() => setViewMode('hex')}
-             style={{
-               fontWeight: viewMode === 'hex' ? 'bold' : 'normal',
-               color: viewMode === 'hex' ? 'var(--accent-blue)' : 'var(--text-muted)',
-               cursor: 'pointer',
-               fontSize: '11px',
-               paddingBottom: '2px',
-               borderBottom: viewMode === 'hex' ? '2px solid var(--accent-blue)' : 'none'
-             }}
-           >HEX</span>
+      {isExpanded && (
+        <div className="session-stream-view" style={{display: 'flex', flexDirection: 'column', height: '500px'}}>
+             <div className="stream-list" style={{flex: 1, overflowY: 'auto', padding: '10px'}}>
+                 {loadingList ? <div style={{textAlign:'center', color:'var(--text-muted)'}}>Loading packets...</div> : (
+                     packetList.map((pkt, idx) => {
+                         const isOutgoing = pkt['ip.src'] === session.src_ip;
+                         return (
+                             <div key={idx} className={`flow-row ${isOutgoing ? 'right' : 'left'}`}>
+                                 {!isOutgoing && <span className="flow-time">{parseFloat(pkt['frame.time_relative']).toFixed(3)}s</span>}
+                                 
+                                 <div 
+                                     className={`flow-card ${isOutgoing ? 'right' : 'left'}`}
+                                     onClick={() => handlePacketClick(pkt)}
+                                     style={{border: selectedPacket === pkt ? '2px solid var(--accent-blue)' : ''}}
+                                 >
+                                     <div className="flow-meta">
+                                         <span>Seq={pkt['tcp.seq']} Ack={pkt['tcp.ack']}</span>
+                                         <span>Len: {pkt['frame.len']}</span>
+                                     </div>
+                                     <div className="flow-content">
+                                         {pkt['tcp.flags.str'] && <span className="flow-badge">{pkt['tcp.flags.str']}</span>}
+                                         {pkt['_ws.col.info']}
+                                     </div>
+                                 </div>
+                                 
+                                 {isOutgoing && <span className="flow-time">{parseFloat(pkt['frame.time_relative']).toFixed(3)}s</span>}
+                             </div>
+                         );
+                     })
+                 )}
+                 <div style={{display: 'flex', justifyContent: 'center', gap: '10px', padding: '10px'}}>
+                     <button disabled={page === 1} onClick={() => loadPackets(page - 1)} className="btn-secondary">Prev</button>
+                     <span style={{alignSelf:'center', fontSize:'12px'}}>Page {page}</span>
+                     <button onClick={() => loadPackets(page + 1)} className="btn-secondary">Next</button>
+                 </div>
+             </div>
+             
+             {selectedPacket && (
+                 <div className="stream-detail" style={{height: '40%', borderTop: '1px solid var(--border-color)', overflowY: 'auto', padding: '16px', background: 'var(--bg-primary)'}}>
+                     {loadingDetail ? <div>Loading details...</div> : (
+                         packetDetails && <PacketDetailTree data={packetDetails._source?.layers} label={`Frame #${selectedPacket['frame.number']}`} initialExpanded={true} />
+                     )}
+                 </div>
+             )}
         </div>
-        <pre className="payload-content" style={{ maxHeight: '150px' }}>
-          {viewMode === 'ascii' ? (session.payload_ascii || '(无数据)') : (session.payload_hex || '(无数据)')}
-        </pre>
-      </div>
+      )}
     </div>
   );
 }
@@ -203,6 +270,14 @@ function App() {
     }, 600);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  useEffect(() => {
+    if (selectedFiles.length > 0 && analysisType !== 'correlation') {
+      if (!analysisResults[analysisType]) {
+        handleAnalyze();
+      }
+    }
+  }, [analysisType, selectedFiles]);
 
   const handleSelectFile = async () => {
     try {
@@ -479,7 +554,7 @@ function App() {
       </div>
 
       {data.tcp_sessions?.map((session, idx) => (
-        <TcpSessionCard key={idx} session={session} />
+        <TcpSessionCard key={idx} session={session} filePath={selectedFiles[0]} />
       ))}
     </>
   );
@@ -590,14 +665,7 @@ function App() {
                   </div>
                 </div>
 
-                <button
-                  className="btn-analyze"
-                  onClick={handleAnalyze}
-                  disabled={loading}
-                  title={!isSidebarOpen ? `开始${currentTypeLabel}` : ""}
-                >
-                  {isSidebarOpen ? (loading ? '分析中...' : `开始${currentTypeLabel}`) : (loading ? '...' : '▶')}
-                </button>
+
               </>
             )}
           </div>

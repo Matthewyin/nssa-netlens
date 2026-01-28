@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   selectOutputDirectory: () => ipcRenderer.invoke('select-output-directory'),
   getPacketDetails: (filePath, frameNumber) => ipcRenderer.invoke('get-packet-details', filePath, frameNumber),
   analyzeCorrelation: (file1, file2) => ipcRenderer.invoke('analyze-correlation', file1, file2),
+  getTcpStreamPackets: (filePath, streamId, page) => ipcRenderer.invoke('get-tcp-stream-packets', filePath, streamId, page),
   askAi: (message, filePath) => ipcRenderer.invoke('ask-ai', message, filePath),
   verifyAiConfig: (config) => ipcRenderer.invoke('verify-ai-config', config),
   copyToClipboard: (text) => ipcRenderer.invoke('copy-to-clipboard', text),

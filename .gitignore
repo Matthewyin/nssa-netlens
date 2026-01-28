@@ -6,8 +6,9 @@ release/
 build/
 analysis_reports/
 aaa/
-tests/*.pcap
-tests/*.pcapng
-test.pcapng
+tests/
+scripts/
+.opencode/
+.claude/
 .DS_Store
 .env

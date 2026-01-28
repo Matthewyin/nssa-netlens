@@ -22,6 +22,10 @@ def main() -> int:
     parser.add_argument(
         "--file2", help="Second PCAP file for correlation", default=None
     )
+    parser.add_argument("--stream", help="Stream ID for TCP packets", default=None)
+    parser.add_argument(
+        "--page", help="Page number for pagination", type=int, default=1
+    )
 
     args = parser.parse_args()
 
@@ -40,6 +44,14 @@ def main() -> int:
 
             analyzer = PcapAnalyzer(args.filepath)
             result = analyzer.get_packet_details(args.frame)
+        elif args.analysis_type == "tcp_stream_packets":
+            if not args.stream:
+                print(json.dumps({"error": "Stream ID required (--stream)"}))
+                return 1
+            from .analyzer import PcapAnalyzer
+
+            analyzer = PcapAnalyzer(args.filepath)
+            result = analyzer.get_tcp_stream_packets(args.stream, args.page)
         elif args.analysis_type == "correlate":
             if not args.file2:
                 print(json.dumps({"error": "Second file required (--file2)"}))

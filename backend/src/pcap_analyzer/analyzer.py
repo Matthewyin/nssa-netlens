@@ -64,6 +64,7 @@ class TcpSession:
     payload_hex: str
     protocol: str = "TCP"
     summary: str = ""
+    is_binary: bool = False
 
 
 @dataclass
@@ -121,6 +122,16 @@ class PcapAnalyzer:
         if not search_query:
             return base_filter
         return f"({base_filter}) and ({search_query})"
+
+    def _is_binary(self, data: bytes) -> bool:
+        if not data:
+            return False
+        # Count non-printable chars (excluding common whitespace)
+        # Printable: 32-126. Whitespace: 9, 10, 13.
+        text_chars = bytearray(
+            {7, 8, 9, 10, 12, 13, 27} | set(range(0x20, 0x100)) - {0x7F}
+        )
+        return bool(data.translate(None, text_chars))
 
     def analyze_summary(self) -> AnalysisResult:
         from .tshark import tshark
@@ -818,6 +829,53 @@ class PcapAnalyzer:
         except Exception as e:
             return {"error": str(e)}
 
+    def get_tcp_stream_packets(
+        self, stream_id: str, page: int = 1, page_size: int = 50
+    ) -> dict[str, Any]:
+        from .tshark import tshark
+
+        if not tshark.is_available():
+            return {"error": "Tshark not available"}
+
+        fields = [
+            "frame.number",
+            "frame.time_relative",
+            "frame.len",
+            "ip.src",
+            "ip.dst",
+            "tcp.srcport",
+            "tcp.dstport",
+            "tcp.seq",
+            "tcp.ack",
+            "tcp.flags.str",
+            "tcp.len",
+            "_ws.col.info",
+        ]
+
+        packets = []
+        skip = (page - 1) * page_size
+
+        try:
+            iterator = tshark.stream_fields(
+                str(self.filepath), fields, display_filter=f"tcp.stream eq {stream_id}"
+            )
+
+            # Skip
+            for _ in range(skip):
+                next(iterator, None)
+
+            # Take
+            for _ in range(page_size):
+                row = next(iterator, None)
+                if row is None:
+                    break
+                packets.append(row)
+
+        except Exception as e:
+            return {"error": str(e)}
+
+        return {"stream_id": stream_id, "page": page, "packets": packets}
+
     def analyze_tcp_anomalies(self, search_query: str | None = None) -> dict[str, Any]:
         from .tshark import tshark
 
@@ -954,7 +1012,9 @@ class PcapAnalyzer:
                         "tcp": {
                             "seq": layers.get("tcp.seq", ["0"])[0],
                             "ack": layers.get("tcp.ack", ["0"])[0],
+                            "win": layers.get("tcp.window_size_value", ["0"])[0],
                             "flags_str": layers.get("tcp.flags.str", [""])[0],
+                            "flags_hex": layers.get("tcp.flags", ["0x00"])[0],
                         },
                     }
                 )

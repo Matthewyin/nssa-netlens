@@ -651,6 +651,62 @@ ipcMain.handle('ask-ai', async (event, message, filePath) => {
   }
 });
 
+ipcMain.handle('get-tcp-stream-packets', async (event, filePath, streamId, page) => {
+  return new Promise((resolve, reject) => {
+    const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+    
+    let pythonCmd;
+    let args;
+    
+    if (isDev) {
+      pythonCmd = 'uv';
+      const pythonBackendPath = path.join(__dirname, '..', '..', 'backend');
+      args = [
+        'run',
+        '--directory',
+        pythonBackendPath,
+        'python',
+        '-m',
+        'pcap_analyzer.cli',
+        'tcp_stream_packets',
+        filePath,
+        '--stream',
+        streamId,
+        '--page',
+        page.toString()
+      ];
+    } else {
+      pythonCmd = path.join(process.resourcesPath, 'python-backend', 'server');
+      args = ['tcp_stream_packets', filePath, '--stream', streamId, '--page', page.toString()];
+    }
+
+    const childProcess = spawn(pythonCmd, args);
+    let stdout = '';
+    let stderr = '';
+
+    childProcess.stdout.on('data', (data) => {
+      stdout += data.toString();
+    });
+
+    childProcess.stderr.on('data', (data) => {
+      stderr += data.toString();
+    });
+
+    childProcess.on('close', (code) => {
+      if (code === 0) {
+        try {
+          const result = JSON.parse(stdout);
+          resolve(result);
+        } catch (e) {
+          reject(new Error(`Failed to parse JSON: ${e.message}`));
+        }
+      } else {
+        reject(new Error(`Python process exited with code ${code}: ${stderr}`));
+      }
+    });
+  });
+});
+
 app.whenReady().then(() => {
   createWindow();
   
