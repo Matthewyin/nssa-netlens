@@ -1,89 +1,96 @@
 # NetLens (网络透镜)
 
-NetLens 是一款专业级、AI 驱动的网络流量分析与可视化工具，基于 Electron、React 和 Python (Tshark) 构建。
+**专业的 AI 驱动网络流量分析与可视化平台**
 
-## 🌟 核心特性 (v0.2.1)
+NetLens 将 Wireshark 的深度解析能力与现代 AI 的推理能力相结合，为网络工程师、安全研究员提供了一个高性能、可视化、智能化的分析工具。
 
-### 🤖 AI 分析师 (AI Copilot)
-*   **智能对话**: 内置 AI 助手，支持自然语言提问（如"帮我分析为什么连接慢"）。
-*   **多模型支持**: 兼容 OpenAI、DeepSeek、Ollama 等多种模型配置，支持一键切换与**连接验证**。
-*   **多文件智能对比**: AI 可识别并对比两个抓包文件，自动调用关联引擎查找丢包与时延。
-*   **工具调用**: AI 可直接调用后端 Tshark 引擎进行实时数据查询与分析。
-*   **安全存储**: API Key 采用系统级加密存储 (Keychain/DPAPI)，保障凭证安全。
+---
 
-### 📊 深度可视化 (Deep Visualization)
-*   **故障诊断**: 交互式 TCP 时序图 (Sequence Diagram)，自动检测重传、零窗口、丢包等异常，并提供专家级建议。
-*   **主从视图**: HTTP/DNS/TLS 分析全面采用 Master-Detail 双栏布局，左侧极速列表，右侧全量包头详情。
-*   **多文件关联**: 支持同时导入两个抓包文件（如防火墙内外），自动关联数据流并计算时延与丢包情况。
+## 💡 核心价值
 
-### ⚡️ 高性能内核 (High Performance)
-*   **Zero-Scapy**: 全面迁移至 Tshark 流式解析架构，轻松处理 GB 级大文件，内存占用极低。
-*   **全量搜索**: 支持 Tshark 显示过滤器语法的后端搜索，实现真正的数据深挖。
+传统的网络分析工具（如 Wireshark）功能强大但门槛极高，用户需要记忆复杂的过滤语法，并人工从海量数据中寻找线索。NetLens 旨在解决以下痛点：
 
-## 🛠 安装与使用
+1.  **智能化 (Intelligent)**: 内置 AI 分析师，用户可以通过自然语言提问（如"帮我看看有没有 SQL 注入"），AI 自动调用工具进行排查。
+2.  **可视化 (Visual)**: 提供交互式 TCP 时序图、全量包头详情树、流量趋势图，将枯燥的数据转为直观的图表。
+3.  **关联性 (Correlated)**: 独有的"多文件关联分析"功能，能够自动对比防火墙内外的抓包文件，精准定位丢包和时延。
+4.  **高性能 (Performance)**: 底层基于 Tshark 流式解析，内存占用极低，轻松处理 GB 级大文件。
 
-### v0.2.1 更新日志
-- **修复**: AI 无法读取第二个文件路径的问题。
-- **修复**: 应用 Logo 显示异常。
-- **优化**: 设置界面支持自动保存和多配置管理。
-- **优化**: 全局搜索升级为后端驱动，支持正则和复杂语法。
-- **优化**: 聊天窗口支持宽屏模式和独立消息复制。
+---
 
-### 前置要求
-- 系统需安装 [Wireshark](https://www.wireshark.org/) (确保 `tshark` 命令可用)。
+## 🏗️ 技术架构
 
-### 下载安装
-从 [Releases](https://github.com/Matthewyin/nssa-netlens/releases) 页面下载最新的 `.dmg` 安装包（macOS）。
-
-## 🏗️ 开发指南
-
-### 环境准备
-1.  Clone 代码仓库。
-2.  前端依赖: `cd frontend && npm install`
-3.  后端依赖: `cd backend && uv sync` (推荐使用 uv 管理 Python 环境)
-
-### 运行开发版
-```bash
-cd frontend && npm run dev
-```
-
-### 构建发布
-```bash
-# 1. 构建后端二进制
-bash backend/build_backend.sh
-
-# 2. 打包 Electron 应用
-cd frontend && npm run build:mac
-```
-
-## 🤖 AI 配置指南
-1.  点击左下角 "⚙️ 设置"。
-2.  添加 AI 配置（支持 OpenAI 格式的 API）。
-3.  点击 "验证连接" 确保配置正确。
-4.  保存后即可在右侧边栏与 AI 分析师对话。
-
-## ⚖️ License
-MIT
-
-
-
-
+NetLens 采用现代化的混合架构，兼顾了前端的灵活性与后端的性能。
 
 ```mermaid
 graph TD
-    User["用户 (User)"] --"1. 提问: 帮我分析异常流量"--> Frontend["前端 (React Chat UI)"]
-    Frontend --"2. IPC: ask-ai"--> Main["Electron 主进程 (AI Runtime)"]
+    User[用户] -->|交互| UI[Electron + React 前端]
+    UI -->|IPC 通信| Main[Electron 主进程]
     
-    subgraph "AI 循环 (Loop)"
-        Main --"3. 发送 Prompt + Tools 定义"--> LLM["大模型 (OpenAI/DeepSeek)"]
-        LLM --"4. 返回 Tool Call (如 scan_security_threats)"--> Main
-        Main --"5. 执行本地工具"--> Python["Python 后端 (Tshark Wrapper)"]
-        Python --"6. 返回 JSON 结果"--> Main
-        Main --"7. 发送 Tool Output 给 LLM"--> LLM
-        LLM --"8. 生成最终分析报告"--> Main
+    subgraph "AI 智能体 (Agent Runtime)"
+        Main -->|Prompt + Tools| LLM[大模型 (OpenAI/DeepSeek)]
+        LLM -->|Function Call| Main
     end
     
-    Main --"9. 返回 Content"--> Frontend
-    Frontend --"10. 展示 Markdown"--> User
+    subgraph "分析引擎 (Analysis Engine)"
+        Main -->|Spawn| Python[Python 后端]
+        Python -->|Stream/JSON| Tshark[Wireshark CLI (Tshark)]
+        Tshark -->|Raw Packets| File[(PCAP 文件)]
+    end
 ```
 
+### 🤖 AI 调用逻辑 (ReAct 模式)
+
+NetLens 不仅仅是把数据发给 AI，而是实现了一个完整的 **ReAct (Reasoning + Acting)** 循环：
+
+1.  **感知**: 用户输入自然语言问题。
+2.  **思考**: AI 分析用户意图，决定需要调用哪些工具（如 `scan_security_threats`）。
+3.  **行动**: Electron 拦截 AI 的指令，在本地调用 Python/Tshark 执行实际分析。**原始 PCAP 数据永远不会上传给 AI，仅上传脱敏后的统计结果 (JSON)**，最大程度保护隐私。
+4.  **反馈**: 工具执行结果返回给 AI。
+5.  **回答**: AI 综合数据生成最终报告。
+
+---
+
+## 🌟 功能特性
+
+### 1. 故障诊断 (Troubleshooting)
+*   **TCP 健康体检**: 自动检测重传 (Retransmission)、零窗口 (Zero Window)、乱序、Reset 等异常。
+*   **交互式时序图**: 左右分栏展示会话流向与包详情，点击即可查看全量包头。
+
+### 2. 协议深度分析
+*   **HTTP**: 提取 User-Agent, Content-Type, Cookie，支持 JSON/Text Body 预览。
+*   **TLS**: 解析握手信息，展示证书链 (Issuer, Subject, Validity)。
+*   **DNS**: 识别 NXDOMAIN 错误，展示完整的查询/响应树。
+
+### 3. 多点关联分析
+*   导入两个抓包文件（如源端和目的端），系统自动基于 TCP Seq/Ack 匹配数据流。
+*   直观展示 **丢包 (Packet Loss)** 和 **时延 (Latency)**。
+
+---
+
+## 🛠 安装与使用
+
+### 前置要求
+*   **macOS** (目前仅支持 Mac)
+*   系统需安装 **Wireshark** (确保 `tshark` 命令可用)。
+
+### 安装
+从 [Releases](https://github.com/Matthewyin/nssa-netlens/releases) 页面下载最新的 `.dmg` 安装包。
+
+### 使用指南
+1.  **启动**: 打开 NetLens。
+2.  **配置 AI**: 点击左下角 `⚙️ 设置`，输入您的 API Key 和 Base URL (支持 OpenAI, DeepSeek, Ollama 等)。点击"验证"确保连接成功。
+3.  **导入数据**: 点击左上角 `+` 选择一个或两个 `.pcap` 文件。
+4.  **开始分析**:
+    *   **手动模式**: 点击侧边栏的 "HTTP"、"故障诊断" 等按钮查看报表。
+    *   **AI 模式**: 点击右侧 "🤖 AI 分析师"，输入 "分析一下这个包的异常"，等待 AI 给出报告。
+
+---
+
+## ⚠️ 版权声明
+
+本项目 (**NetLens**) 仅供网络安全研究、教学及故障排查使用。
+
+*   **非商业用途**: 未经授权，禁止将本项目用于商业产品集成或销售。
+*   **免责声明**: 使用本工具进行网络分析时请遵守当地法律法规，开发者不对使用本工具造成的任何后果负责。
+
+License: **MIT (Non-Commercial Use Suggested)**

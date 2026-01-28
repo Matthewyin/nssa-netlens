@@ -43,7 +43,7 @@ const MessageBubble = ({ msg }) => {
   );
 };
 
-function AiChatSidebar({ isOpen, onClose, filePath }) {
+function AiChatSidebar({ isOpen, onClose, filePaths }) {
   const [messages, setMessages] = useState([
     { role: 'assistant', content: '你好！我是 NetLens AI 助手。你可以问我关于当前 PCAP 文件的任何问题，或者让我帮你分析异常流量。' }
   ]);
@@ -94,7 +94,7 @@ function AiChatSidebar({ isOpen, onClose, filePath }) {
     setIsTyping(true);
     
     try {
-      const response = await window.electronAPI.askAi(userMessage, filePath);
+      const response = await window.electronAPI.askAi(userMessage, filePaths);
       setMessages(prev => [...prev, { 
         role: 'assistant', 
         content: response.content 
