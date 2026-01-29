@@ -6,6 +6,7 @@ import HttpPanel from './HttpPanel';
 import DnsPanel from './DnsPanel';
 import TlsPanel from './TlsPanel';
 import CorrelationPanel from './CorrelationPanel';
+import LinkTracePanel from './LinkTracePanel';
 import SearchBar from './SearchBar';
 import AiChatSidebar from './AiChatSidebar';
 import PacketDetailTree from './PacketDetailTree';
@@ -20,6 +21,7 @@ const ANALYSIS_TYPES = [
   { id: 'tcp_anomalies', label: '故障诊断', icon: '🚑' },
   { id: 'security_scan', label: '安全分析', icon: '🛡️' },
   { id: 'correlation', label: '对比分析', icon: '🔗' },
+  { id: 'link_trace', label: '链路追踪', icon: '🔀' },
 ];
 
 function formatBytes(bytes) {
@@ -319,6 +321,11 @@ function App() {
              selectedFiles[0],
              selectedFiles[1]
          );
+      } else if (analysisType === 'link_trace') {
+         result = await window.electronAPI.analyzeLinkTrace(
+             selectedFiles[0],
+             selectedFiles.length > 1 ? selectedFiles[1] : null
+         );
       } else {
          result = await window.electronAPI.analyzePcap(
             selectedFiles[0],
@@ -608,6 +615,8 @@ function App() {
         return renderSecurityResult(data);
       case 'correlation':
         return <CorrelationPanel data={data} files={selectedFiles} />;
+      case 'link_trace':
+        return <LinkTracePanel data={data} files={selectedFiles} />;
       default:
         return <pre>{JSON.stringify(data, null, 2)}</pre>;
     }
