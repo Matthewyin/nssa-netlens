@@ -60,6 +60,14 @@ def main() -> int:
 
             analyzer = MultiPcapAnalyzer()
             result = analyzer.correlate(args.filepath, args.file2)
+        elif args.analysis_type == "link_trace":
+            from .link_tracer import LinkTracer
+
+            tracer = LinkTracer()
+            if args.file2:
+                result = tracer.trace_multi_file(args.filepath, args.file2)
+            else:
+                result = tracer.trace_single_file(args.filepath)
         else:
             result = analyze_pcap(args.filepath, args.analysis_type, options)
 

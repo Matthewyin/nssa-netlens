@@ -373,6 +373,68 @@ ipcMain.handle('analyze-correlation', async (event, file1, file2) => {
   return await handleAnalyzeCorrelation(file1, file2);
 });
 
+const handleAnalyzeLinkTrace = async (file1, file2) => {
+  return new Promise((resolve, reject) => {
+    const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+    
+    let pythonCmd;
+    let args;
+    
+    if (isDev) {
+      pythonCmd = 'uv';
+      const pythonBackendPath = path.join(__dirname, '..', '..', 'backend');
+      args = [
+        'run',
+        '--directory',
+        pythonBackendPath,
+        'python',
+        '-m',
+        'pcap_analyzer.cli',
+        'link_trace',
+        file1
+      ];
+      if (file2) {
+        args.push('--file2', file2);
+      }
+    } else {
+      pythonCmd = path.join(process.resourcesPath, 'python-backend', 'server');
+      args = ['link_trace', file1];
+      if (file2) {
+        args.push('--file2', file2);
+      }
+    }
+
+    const childProcess = spawn(pythonCmd, args);
+    let stdout = '';
+    let stderr = '';
+
+    childProcess.stdout.on('data', (data) => {
+      stdout += data.toString();
+    });
+
+    childProcess.stderr.on('data', (data) => {
+      stderr += data.toString();
+    });
+
+    childProcess.on('close', (code) => {
+      if (code === 0) {
+        try {
+          const result = JSON.parse(stdout);
+          resolve(result);
+        } catch (e) {
+          reject(new Error(`Failed to parse JSON: ${e.message}`));
+        }
+      } else {
+        reject(new Error(`Python process exited with code ${code}: ${stderr}`));
+      }
+    });
+  });
+};
+
+ipcMain.handle('analyze-link-trace', async (event, file1, file2) => {
+  return await handleAnalyzeLinkTrace(file1, file2);
+});
+
 ipcMain.handle('copy-to-clipboard', (event, text) => {
   clipboard.writeText(text);
   return true;
