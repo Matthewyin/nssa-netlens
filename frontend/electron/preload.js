@@ -13,4 +13,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   askAi: (message, filePath) => ipcRenderer.invoke('ask-ai', message, filePath),
   verifyAiConfig: (config) => ipcRenderer.invoke('verify-ai-config', config),
   copyToClipboard: (text) => ipcRenderer.invoke('copy-to-clipboard', text),
+  openInWireshark: (pcapFile, frameNumber) => ipcRenderer.invoke('open-in-wireshark', pcapFile, frameNumber),
 });

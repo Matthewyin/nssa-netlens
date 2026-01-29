@@ -17,8 +17,30 @@ from .tshark import tshark
 
 
 @dataclass
+class PacketInfo:
+    """Individual packet details within a hop"""
+
+    seq: int
+    frame_number: int
+    time_epoch: float
+    relative_time_ms: float
+    size: int
+    src_port: int
+    dst_port: int
+    seq_num: int
+    ack_num: int
+    flags: str
+    window_size: int
+    checksum: str
+    urgent_pointer: int
+    options: str
+    info: str
+    is_retransmission: bool = False
+
+
+@dataclass
 class SessionInfo:
-    """TCP session metadata"""
+    """TCP session metadata with bidirectional flow tracking"""
 
     session_id: str
     src_ip: str
@@ -33,18 +55,32 @@ class SessionInfo:
     http_headers: dict = field(default_factory=dict)
     packet_sizes: list = field(default_factory=list)
     file_source: str = ""
+    forward_start: float = 0.0
+    forward_end: float = 0.0
+    forward_packets: int = 0
+    forward_bytes: int = 0
+    backward_start: float = 0.0
+    backward_end: float = 0.0
+    backward_packets: int = 0
+    backward_bytes: int = 0
 
 
 @dataclass
 class ChainHop:
-    """A single hop in a session chain"""
+    """A single unidirectional hop in a session chain"""
 
     session_id: str
     src: str
     dst: str
     packet_count: int
+    byte_count: int
     duration: float
     file: str
+    direction: str = "request"
+    start_time: float = 0.0
+    missing: bool = False
+    packets: list = field(default_factory=list)
+    total_packets: int = 0
 
 
 @dataclass
@@ -116,19 +152,35 @@ class LinkTracer:
                 session = sessions[stream_id]
                 session.packet_count += 1
 
-                # Frame length for size sequence
                 frame_len = int(row.get("frame.len", 0))
                 session.byte_count += frame_len
-                if len(session.packet_sizes) < 20:  # Keep first 20 packet sizes
+                if len(session.packet_sizes) < 20:
                     session.packet_sizes.append(frame_len)
 
-                # Timestamps
                 try:
                     ts = float(row.get("frame.time_epoch", 0))
                     if session.start_time == 0 or ts < session.start_time:
                         session.start_time = ts
                     if ts > session.end_time:
                         session.end_time = ts
+
+                    pkt_src_ip = row.get("ip.src", "")
+                    is_forward = pkt_src_ip == session.src_ip
+
+                    if is_forward:
+                        session.forward_packets += 1
+                        session.forward_bytes += frame_len
+                        if session.forward_start == 0 or ts < session.forward_start:
+                            session.forward_start = ts
+                        if ts > session.forward_end:
+                            session.forward_end = ts
+                    else:
+                        session.backward_packets += 1
+                        session.backward_bytes += frame_len
+                        if session.backward_start == 0 or ts < session.backward_start:
+                            session.backward_start = ts
+                        if ts > session.backward_end:
+                            session.backward_end = ts
                 except (ValueError, TypeError):
                     pass
 
@@ -211,10 +263,110 @@ class LinkTracer:
         except Exception as e:
             print(f"Error extracting HTTP headers: {e}")
 
+    def _parse_tcp_flags(self, flags_value: str) -> str:
+        """Convert tshark tcp.flags hex value to readable string"""
+        try:
+            flags_int = (
+                int(flags_value, 16)
+                if flags_value.startswith("0x")
+                else int(flags_value)
+            )
+            parts = []
+            if flags_int & 0x02:
+                parts.append("SYN")
+            if flags_int & 0x10:
+                parts.append("ACK")
+            if flags_int & 0x08:
+                parts.append("PSH")
+            if flags_int & 0x01:
+                parts.append("FIN")
+            if flags_int & 0x04:
+                parts.append("RST")
+            if flags_int & 0x20:
+                parts.append("URG")
+            return ",".join(parts) if parts else "---"
+        except (ValueError, TypeError):
+            return flags_value or "---"
+
+    def _extract_hop_packets(
+        self,
+        filepath: str,
+        session_id: str,
+        src_ip: str,
+        direction: str,
+    ) -> list[PacketInfo]:
+        """Extract packet details for a specific hop (session + direction)"""
+        if not tshark.is_available():
+            return []
+
+        fields = [
+            "frame.number",
+            "frame.time_epoch",
+            "frame.len",
+            "ip.src",
+            "tcp.srcport",
+            "tcp.dstport",
+            "tcp.seq",
+            "tcp.ack",
+            "tcp.flags",
+            "tcp.window_size_value",
+            "tcp.checksum",
+            "tcp.urgent_pointer",
+            "tcp.options",
+            "_ws.col.Info",
+            "tcp.analysis.retransmission",
+        ]
+
+        packets: list[PacketInfo] = []
+        first_time: float = 0.0
+        seq_counter = 0
+
+        try:
+            display_filter = f"tcp.stream eq {session_id}"
+            for row in tshark.stream_fields(
+                filepath, fields, display_filter=display_filter
+            ):
+                pkt_src_ip = row.get("ip.src", "")
+                is_forward = pkt_src_ip == src_ip
+
+                if (direction == "request" and not is_forward) or (
+                    direction == "response" and is_forward
+                ):
+                    continue
+
+                seq_counter += 1
+                time_epoch = float(row.get("frame.time_epoch", 0))
+                if first_time == 0:
+                    first_time = time_epoch
+
+                pkt = PacketInfo(
+                    seq=seq_counter,
+                    frame_number=int(row.get("frame.number", 0)),
+                    time_epoch=time_epoch,
+                    relative_time_ms=round((time_epoch - first_time) * 1000, 3),
+                    size=int(row.get("frame.len", 0)),
+                    src_port=int(row.get("tcp.srcport", 0)),
+                    dst_port=int(row.get("tcp.dstport", 0)),
+                    seq_num=int(row.get("tcp.seq", 0)),
+                    ack_num=int(row.get("tcp.ack", 0)),
+                    flags=self._parse_tcp_flags(row.get("tcp.flags", "")),
+                    window_size=int(row.get("tcp.window_size_value", 0)),
+                    checksum=row.get("tcp.checksum", ""),
+                    urgent_pointer=int(row.get("tcp.urgent_pointer", 0)),
+                    options=row.get("tcp.options", ""),
+                    info=row.get("_ws.col.Info", ""),
+                    is_retransmission=row.get("tcp.analysis.retransmission", "") != "",
+                )
+                packets.append(pkt)
+        except Exception as e:
+            print(f"Error extracting hop packets: {e}")
+
+        return packets
+
     def _match_by_payload_fingerprint(
         self, sessions: list[SessionInfo]
     ) -> list[tuple[SessionInfo, SessionInfo, float]]:
-        """Match sessions by payload fingerprint"""
+        """Match sessions by payload fingerprint with proxy pattern validation"""
         matches = []
         fingerprint_index: dict[str, list[SessionInfo]] = defaultdict(list)
 
@@ -222,20 +374,32 @@ class LinkTracer:
             if session.payload_fingerprint:
                 fingerprint_index[session.payload_fingerprint].append(session)
 
-        # Find groups with matching fingerprints
         for fingerprint, group in fingerprint_index.items():
             if len(group) >= 2:
-                # Sort by start time
                 group.sort(key=lambda s: s.start_time)
                 for i in range(len(group) - 1):
                     for j in range(i + 1, len(group)):
-                        # Don't match sessions from same IP pair
-                        if (
-                            group[i].src_ip == group[j].src_ip
-                            and group[i].dst_ip == group[j].dst_ip
-                        ):
+                        s1, s2 = group[i], group[j]
+
+                        if s1.src_ip == s2.src_ip and s1.dst_ip == s2.dst_ip:
                             continue
-                        matches.append((group[i], group[j], 0.85))
+
+                        time_diff = abs(s2.start_time - s1.start_time)
+                        if time_diff > self.TIME_WINDOW * 2:
+                            continue
+
+                        is_direct_proxy = s1.dst_ip == s2.src_ip
+                        is_port_preserved = (
+                            s1.src_port == s2.src_port and s1.src_ip != s2.src_ip
+                        )
+                        is_same_vip = s1.dst_ip == s2.dst_ip and s1.src_ip != s2.src_ip
+
+                        if is_direct_proxy:
+                            matches.append((s1, s2, 0.90))
+                        elif is_port_preserved and is_same_vip:
+                            matches.append((s1, s2, 0.85))
+                        elif is_port_preserved or is_same_vip:
+                            matches.append((s1, s2, 0.75))
 
         return matches
 
@@ -311,11 +475,37 @@ class LinkTracer:
                 if s1.src_ip == s2.src_ip and s1.dst_ip == s2.dst_ip:
                     continue
 
-                # Check if IPs suggest proxying (s1.dst == s2.src or similar)
+                # Check if IPs/ports suggest a valid proxy relationship
+                # Scenario 1: Direct proxy chain (s1.dst_ip == s2.src_ip)
+                # Scenario 2: F5/NAT SNAT pattern - source port preserved across hops
+                #   e.g., Client:21238 -> VIP, then SNAT:21238 -> Backend
+                # Scenario 3: Shared VIP - s1.dst_ip == s2.dst_ip (same destination VIP)
+                #   with source port preserved (strong indicator of same flow)
+
+                is_direct_proxy = s1.dst_ip == s2.src_ip
+
+                # F5 SNAT typically preserves source port
+                # If both sessions have same source port AND go to same VIP, likely related
+                is_snat_pattern = (
+                    s1.src_port == s2.src_port  # Same source port (SNAT preserved)
+                    and s1.dst_ip == s2.dst_ip  # Same destination VIP
+                    and s1.src_ip
+                    != s2.src_ip  # Different source IPs (client vs SNAT IP)
+                )
+
+                # Relaxed SNAT: same source port, different source IPs,
+                # and s2.src could be a known SNAT range
+                is_port_preserved_proxy = (
+                    s1.src_port == s2.src_port  # Source port preserved
+                    and s1.src_ip != s2.src_ip  # Different sources
+                    and (
+                        s1.dst_ip == s2.dst_ip  # Same VIP
+                        or s1.dst_ip == s2.src_ip  # Direct chain
+                    )
+                )
+
                 is_proxy_pattern = (
-                    s1.dst_ip == s2.src_ip  # Direct proxy
-                    or s1.dst_port in [80, 443, 8080, 8443]
-                    and s2.dst_port in [80, 443, 8080, 8443]  # Both HTTP
+                    is_direct_proxy or is_snat_pattern or is_port_preserved_proxy
                 )
 
                 if not is_proxy_pattern:
@@ -354,8 +544,47 @@ class LinkTracer:
 
         return matches / n
 
+    def _is_valid_hop_pair(self, s1: SessionInfo, s2: SessionInfo) -> bool:
+        """Validate that two sessions can be consecutive hops in a chain"""
+        is_direct_proxy = s1.dst_ip == s2.src_ip
+        is_port_preserved = s1.src_port == s2.src_port and s1.src_ip != s2.src_ip
+        is_same_vip = s1.dst_ip == s2.dst_ip and s1.src_ip != s2.src_ip
+        return (
+            is_direct_proxy or (is_port_preserved and is_same_vip) or is_port_preserved
+        )
+
+    def _split_invalid_chains(
+        self, group_keys: list[str], session_map: dict[str, SessionInfo]
+    ) -> list[list[str]]:
+        """Split a group into valid sub-chains based on hop connectivity"""
+        if len(group_keys) <= 1:
+            return [group_keys]
+
+        sorted_keys = sorted(group_keys, key=lambda k: session_map[k].start_time)
+        valid_chains: list[list[str]] = []
+        current_chain: list[str] = [sorted_keys[0]]
+
+        for i in range(1, len(sorted_keys)):
+            prev_session = session_map[current_chain[-1]]
+            curr_session = session_map[sorted_keys[i]]
+
+            if self._is_valid_hop_pair(prev_session, curr_session):
+                current_chain.append(sorted_keys[i])
+            else:
+                if len(current_chain) >= 2:
+                    valid_chains.append(current_chain)
+                current_chain = [sorted_keys[i]]
+
+        if len(current_chain) >= 2:
+            valid_chains.append(current_chain)
+
+        return valid_chains
+
     def _build_chains(
-        self, matches: list[tuple[SessionInfo, SessionInfo, float, str]]
+        self,
+        matches: list[tuple[SessionInfo, SessionInfo, float, str]],
+        filepath: str = "",
+        include_packets: bool = True,
     ) -> list[SessionChain]:
         """Build session chains from pairwise matches"""
         if not matches:
@@ -393,71 +622,136 @@ class LinkTracer:
         for key in session_map:
             groups[find(key)].append(key)
 
-        # Create chains
+        # Create chains - split invalid groups into valid sub-chains
         chains = []
         for group_keys in groups.values():
             if len(group_keys) < 2:
                 continue
 
-            # Sort by start time
-            sorted_keys = sorted(group_keys, key=lambda k: session_map[k].start_time)
+            valid_sub_chains = self._split_invalid_chains(group_keys, session_map)
 
-            # Calculate chain confidence (average of match confidences)
-            total_conf = 0
-            methods_used = []
-            for i in range(len(sorted_keys) - 1):
-                k1, k2 = sorted_keys[i], sorted_keys[i + 1]
-                if (k1, k2) in match_info:
-                    conf, method = match_info[(k1, k2)]
-                elif (k2, k1) in match_info:
-                    conf, method = match_info[(k2, k1)]
-                else:
-                    conf, method = 0.5, "inferred"
-                total_conf += conf
-                methods_used.append(method)
+            for sorted_keys in valid_sub_chains:
+                if len(sorted_keys) < 2:
+                    continue
 
-            avg_confidence = (
-                total_conf / (len(sorted_keys) - 1) if len(sorted_keys) > 1 else 0.5
-            )
-            primary_method = (
-                max(set(methods_used), key=methods_used.count)
-                if methods_used
-                else "unknown"
-            )
+                total_conf = 0
+                methods_used = []
+                for i in range(len(sorted_keys) - 1):
+                    k1, k2 = sorted_keys[i], sorted_keys[i + 1]
+                    if (k1, k2) in match_info:
+                        conf, method = match_info[(k1, k2)]
+                    elif (k2, k1) in match_info:
+                        conf, method = match_info[(k2, k1)]
+                    else:
+                        conf, method = 0.5, "inferred"
+                    total_conf += conf
+                    methods_used.append(method)
 
-            # Build hops
-            hops = []
-            for key in sorted_keys:
-                s = session_map[key]
-                hops.append(
-                    ChainHop(
+                avg_confidence = (
+                    total_conf / (len(sorted_keys) - 1) if len(sorted_keys) > 1 else 0.5
+                )
+                primary_method = (
+                    max(set(methods_used), key=methods_used.count)
+                    if methods_used
+                    else "unknown"
+                )
+
+                directional_hops: list[ChainHop] = []
+
+                for key in sorted_keys:
+                    s = session_map[key]
+                    file_path_for_packets = filepath if filepath else ""
+
+                    forward_packets: list = []
+                    if (
+                        include_packets
+                        and file_path_for_packets
+                        and s.forward_packets > 0
+                    ):
+                        forward_packets = [
+                            asdict(p)
+                            for p in self._extract_hop_packets(
+                                file_path_for_packets, s.session_id, s.src_ip, "request"
+                            )
+                        ]
+
+                    forward_hop = ChainHop(
                         session_id=s.session_id,
                         src=f"{s.src_ip}:{s.src_port}",
                         dst=f"{s.dst_ip}:{s.dst_port}",
-                        packet_count=s.packet_count,
-                        duration=round(s.end_time - s.start_time, 3),
+                        packet_count=s.forward_packets,
+                        byte_count=s.forward_bytes,
+                        duration=round(s.forward_end - s.forward_start, 3)
+                        if s.forward_packets > 0
+                        else 0.0,
                         file=s.file_source,
+                        direction="request",
+                        start_time=s.forward_start,
+                        missing=s.forward_packets == 0,
+                        packets=forward_packets,
+                        total_packets=len(forward_packets),
+                    )
+                    directional_hops.append(forward_hop)
+
+                    backward_packets: list = []
+                    if (
+                        include_packets
+                        and file_path_for_packets
+                        and s.backward_packets > 0
+                    ):
+                        backward_packets = [
+                            asdict(p)
+                            for p in self._extract_hop_packets(
+                                file_path_for_packets,
+                                s.session_id,
+                                s.src_ip,
+                                "response",
+                            )
+                        ]
+
+                    backward_hop = ChainHop(
+                        session_id=s.session_id,
+                        src=f"{s.dst_ip}:{s.dst_port}",
+                        dst=f"{s.src_ip}:{s.src_port}",
+                        packet_count=s.backward_packets,
+                        byte_count=s.backward_bytes,
+                        duration=round(s.backward_end - s.backward_start, 3)
+                        if s.backward_packets > 0
+                        else 0.0,
+                        file=s.file_source,
+                        direction="response",
+                        start_time=s.backward_start,
+                        missing=s.backward_packets == 0,
+                        packets=backward_packets,
+                        total_packets=len(backward_packets),
+                    )
+                    directional_hops.append(backward_hop)
+
+                directional_hops.sort(
+                    key=lambda h: (h.start_time if h.start_time > 0 else float("inf"))
+                )
+
+                hops = directional_hops
+
+                if len(sorted_keys) >= 2:
+                    first_session = session_map[sorted_keys[0]]
+                    last_session = session_map[sorted_keys[-1]]
+                    first_time = first_session.forward_start or first_session.start_time
+                    last_time = last_session.backward_end or last_session.end_time
+                    latency_ms = (last_time - first_time) * 1000
+                else:
+                    latency_ms = 0
+
+                self.chain_counter += 1
+                chains.append(
+                    SessionChain(
+                        chain_id=f"chain_{self.chain_counter:03d}",
+                        confidence=round(avg_confidence, 2),
+                        method=primary_method,
+                        hops=hops,
+                        latency_ms=round(latency_ms, 2),
                     )
                 )
-
-            # Calculate end-to-end latency
-            if len(hops) >= 2:
-                first_session = session_map[sorted_keys[0]]
-                last_session = session_map[sorted_keys[-1]]
-                latency_ms = (last_session.start_time - first_session.start_time) * 1000
-            else:
-                latency_ms = 0
-
-            self.chain_counter += 1
-            chains.append(
-                SessionChain(
-                    chain_id=f"chain_{self.chain_counter:03d}",
-                    confidence=round(avg_confidence, 2),
-                    method=primary_method,
-                    hops=hops,
-                    latency_ms=round(latency_ms, 2),
-                )
-            )
 
         # Sort by confidence
         chains.sort(key=lambda c: c.confidence, reverse=True)
@@ -505,7 +799,7 @@ class LinkTracer:
                 best_matches[key] = match
 
         # Build chains
-        chains = self._build_chains(list(best_matches.values()))
+        chains = self._build_chains(list(best_matches.values()), filepath=filepath)
 
         # Find unmatched sessions
         matched_ids = set()
@@ -617,8 +911,10 @@ class LinkTracer:
             if key not in best_matches or conf > best_matches[key][2]:
                 best_matches[key] = match
 
-        # Build chains
-        chains = self._build_chains(list(best_matches.values()))
+        # Build chains (disable packet details for multi-file - would need per-session file mapping)
+        chains = self._build_chains(
+            list(best_matches.values()), filepath="", include_packets=False
+        )
 
         # Unmatched
         matched_ids = set()

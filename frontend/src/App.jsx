@@ -251,6 +251,28 @@ function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAiOpen, setIsAiOpen] = useState(false);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    let timer;
+    if (loading) {
+      setProgress(0);
+      timer = setInterval(() => {
+        setProgress(prev => {
+          if (prev >= 90) return prev;
+          // Fast at first, slow at end
+          const increment = Math.max(1, (90 - prev) / 10);
+          return Math.min(90, prev + increment);
+        });
+      }, 200);
+    } else {
+      if (progress > 0) {
+        setProgress(100);
+        setTimeout(() => setProgress(0), 500);
+      }
+    }
+    return () => clearInterval(timer);
+  }, [loading]);
 
   useEffect(() => {
     const handleWheel = (e) => {
@@ -699,14 +721,26 @@ function App() {
 
           {loading && (
             <div className="loading-box">
-              <div className="spinner"></div>
-              <p>正在进行{currentTypeLabel}...</p>
+              <div className="progress-container">
+                <div 
+                    className="progress-bar" 
+                    style={{ width: `${Math.round(progress)}%`, animation: 'none', transition: 'width 0.2s ease-out' }}
+                ></div>
+              </div>
+              <p>正在进行{currentTypeLabel}... {Math.round(progress)}%</p>
             </div>
           )}
 
           {analysisResults[analysisType] && !loading && (
-            <div className="result-container">
-              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px'}}>
+            <div 
+                className="result-container"
+                style={{
+                    overflowY: ['link_trace', 'correlation'].includes(analysisType) ? 'hidden' : 'auto',
+                    padding: ['link_trace', 'correlation'].includes(analysisType) ? '0' : '24px 32px',
+                    display: ['link_trace', 'correlation'].includes(analysisType) ? 'flex' : 'block'
+                }}
+            >
+              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', padding: ['link_trace', 'correlation'].includes(analysisType) ? '24px 32px 0 32px' : '0'}}>
                   <div>
                       <h2 style={{margin: 0}}>{currentTypeLabel}结果</h2>
                       {selectedFiles.length > 0 && analysisType !== 'correlation' && (

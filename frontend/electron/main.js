@@ -440,6 +440,27 @@ ipcMain.handle('copy-to-clipboard', (event, text) => {
   return true;
 });
 
+ipcMain.handle('open-in-wireshark', async (event, pcapFile, frameNumber) => {
+  const { exec } = require('child_process');
+  return new Promise((resolve, reject) => {
+    const wiresharkPath = '/Applications/Wireshark.app/Contents/MacOS/Wireshark';
+    const args = frameNumber ? `-r "${pcapFile}" -g ${frameNumber}` : `-r "${pcapFile}"`;
+    exec(`"${wiresharkPath}" ${args}`, (error) => {
+      if (error) {
+        exec(`open -a Wireshark "${pcapFile}"`, (fallbackError) => {
+          if (fallbackError) {
+            reject(new Error('Could not open Wireshark. Is it installed?'));
+          } else {
+            resolve(true);
+          }
+        });
+      } else {
+        resolve(true);
+      }
+    });
+  });
+});
+
 ipcMain.handle('verify-ai-config', async (event, config) => {
   try {
     if (!config.apiKey || !config.baseUrl || !config.model) {
