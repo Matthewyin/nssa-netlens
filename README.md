@@ -87,9 +87,17 @@ NetLens 不仅仅是把数据发给 AI，而是实现了一个完整的 **ReAct 
 
 ### 安装方法 (macOS)
 1.  进入 [Releases](https://github.com/Matthewyin/nssa-netlens/releases) 页面。
-2.  下载最新的 `.dmg` 安装包 (例如 `NetLens-0.2.4.dmg`)。
+2.  下载最新的 `.dmg` 安装包 (例如 `NetLens-0.2.4-arm64.dmg`)。
 3.  双击 `.dmg` 文件，将 NetLens 图标拖入 Applications 文件夹。
 4.  **首次运行**: 由于未签名，可能需要按住 `Control` 键点击图标，选择“打开”，然后在弹窗中再次点击“打开”。
+
+### 常见问题 (App 已损坏 / 无法打开)
+如果遇到提示“应用已损坏，无法打开”或“无法验证开发者”，请在终端 (Terminal) 执行以下命令修复：
+
+```bash
+xattr -cr /Applications/NetLens.app
+```
+(如果应用不在应用程序目录，请将路径替换为实际位置，如 `~/Downloads/NetLens.app`)
 
 ### 使用指南
 1.  **启动**: 打开 NetLens。
