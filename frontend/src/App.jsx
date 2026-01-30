@@ -296,10 +296,8 @@ function App() {
   }, [searchQuery]);
 
   useEffect(() => {
-    if (selectedFiles.length > 0 && analysisType !== 'correlation') {
-      if (!analysisResults[analysisType]) {
-        handleAnalyze();
-      }
+    if (selectedFiles.length > 0 && !analysisResults[analysisType]) {
+      handleAnalyze();
     }
   }, [analysisType, selectedFiles]);
 
