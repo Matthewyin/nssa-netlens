@@ -6,6 +6,20 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass, field, asdict
 from typing import Any
 
+MAX_PROTOCOLS_DISPLAY = 10
+MAX_TOP_TALKERS = 10
+MAX_TIMELINE_POINTS = 50
+MAX_REQUESTS_OUTPUT = 200
+MAX_QUERIES_OUTPUT = 200
+MAX_HANDSHAKES_OUTPUT = 30
+MAX_TOP_ITEMS = 10
+MAX_TCP_SESSIONS_OUTPUT = 50
+MAX_PAYLOAD_HEX_LENGTH = 4000
+MAX_PAYLOAD_ASCII_LENGTH = 1000
+MAX_PAYLOAD_PREVIEW_LENGTH = 100
+MAX_PAYLOAD_HEX_PREVIEW_BYTES = 100
+PORT_SCAN_THRESHOLD = 20
+
 
 @dataclass
 class PacketSummary:
@@ -230,14 +244,14 @@ class PcapAnalyzer:
                 if total_packets
                 else 0.0,
             )
-            for name, count in protocol_counter.most_common(10)
+            for name, count in protocol_counter.most_common(MAX_PROTOCOLS_DISPLAY)
         ]
 
         sorted_ips = sorted(
             ip_stats.items(),
             key=lambda x: x[1]["sent"] + x[1]["received"],
             reverse=True,
-        )[:10]
+        )[:MAX_TOP_TALKERS]
 
         result.top_talkers = [
             TalkerStats(
@@ -254,11 +268,11 @@ class PcapAnalyzer:
         sorted_buckets = sorted(timeline_buckets.items())
         total_buckets = len(sorted_buckets)
 
-        if total_buckets > 50:
+        if total_buckets > MAX_TIMELINE_POINTS:
             # Resample if too many points
-            step = total_buckets / 50
+            step = total_buckets / MAX_TIMELINE_POINTS
             timeline_data = []
-            for i in range(50):
+            for i in range(MAX_TIMELINE_POINTS):
                 idx = int(i * step)
                 if idx < total_buckets:
                     ts, data = sorted_buckets[idx]
@@ -355,9 +369,10 @@ class PcapAnalyzer:
             "total_requests": total_requests,
             "total_responses": total_responses,
             "unique_hosts": len(host_counter),
-            "requests": requests[:200],  # Limit output
+            "requests": requests[:MAX_REQUESTS_OUTPUT],
             "top_hosts": [
-                {"host": h, "count": c} for h, c in host_counter.most_common(10)
+                {"host": h, "count": c}
+                for h, c in host_counter.most_common(MAX_TOP_ITEMS)
             ],
         }
 
@@ -466,9 +481,10 @@ class PcapAnalyzer:
             "total_queries": total_queries,
             "total_responses": total_responses,
             "unique_domains": len(domain_counter),
-            "queries": queries[:200],
+            "queries": queries[:MAX_QUERIES_OUTPUT],
             "top_domains": [
-                {"domain": d, "count": c} for d, c in domain_counter.most_common(10)
+                {"domain": d, "count": c}
+                for d, c in domain_counter.most_common(MAX_TOP_ITEMS)
             ],
         }
 
@@ -542,8 +558,11 @@ class PcapAnalyzer:
         return {
             "total_handshakes": len(handshakes),
             "unique_sni": len(sni_counter),
-            "handshakes": handshakes[:30],
-            "top_sni": [{"sni": s, "count": c} for s, c in sni_counter.most_common(10)],
+            "handshakes": handshakes[:MAX_HANDSHAKES_OUTPUT],
+            "top_sni": [
+                {"sni": s, "count": c}
+                for s, c in sni_counter.most_common(MAX_TOP_ITEMS)
+            ],
             "versions": dict(version_counter),
         }
 
@@ -568,7 +587,7 @@ class PcapAnalyzer:
                 syn_tracker[src].add(port)
 
         for src_ip, ports in syn_tracker.items():
-            if len(ports) > 20:
+            if len(ports) > PORT_SCAN_THRESHOLD:
                 alerts.append(
                     SecurityAlert(
                         severity="Medium",
@@ -627,7 +646,7 @@ class PcapAnalyzer:
                         description="Basic Authentication header found",
                         source_ip=src_ip,
                         target_ip=dst_ip,
-                        payload_preview=payload[:100],
+                        payload_preview=payload[:MAX_PAYLOAD_PREVIEW_LENGTH],
                     )
                 )
 
@@ -641,7 +660,7 @@ class PcapAnalyzer:
                             description=f"SQL Injection pattern detected: {pattern}",
                             source_ip=src_ip,
                             target_ip=dst_ip,
-                            payload_preview=payload[:100],
+                            payload_preview=payload[:MAX_PAYLOAD_PREVIEW_LENGTH],
                         )
                     )
                     break
@@ -656,7 +675,7 @@ class PcapAnalyzer:
                             description=f"Cross-Site Scripting pattern detected: {pattern}",
                             source_ip=src_ip,
                             target_ip=dst_ip,
-                            payload_preview=payload[:100],
+                            payload_preview=payload[:MAX_PAYLOAD_PREVIEW_LENGTH],
                         )
                     )
                     break
@@ -741,7 +760,7 @@ class PcapAnalyzer:
 
             payload = row.get("tcp.payload")
             # Limit payload accumulation to 2KB per session for preview
-            if payload and len(s["payload_hex"]) < 4000:
+            if payload and len(s["payload_hex"]) < MAX_PAYLOAD_HEX_LENGTH:
                 s["payload_hex"] += payload.replace(":", "")
 
             proto = row.get("_ws.col.protocol")
@@ -765,7 +784,9 @@ class PcapAnalyzer:
                     for c in payload_ascii
                 )
                 # Hex View (first 100 bytes)
-                payload_hex_view = " ".join(f"{b:02x}" for b in payload_bytes[:100])
+                payload_hex_view = " ".join(
+                    f"{b:02x}" for b in payload_bytes[:MAX_PAYLOAD_HEX_PREVIEW_BYTES]
+                )
             except Exception:
                 pass
 
@@ -786,7 +807,7 @@ class PcapAnalyzer:
                         (data["end_time"] or 0) - (data["start_time"] or 0), 3
                     ),
                     start_time=data["start_time"] or 0,
-                    payload_ascii=payload_ascii[:1000],
+                    payload_ascii=payload_ascii[:MAX_PAYLOAD_ASCII_LENGTH],
                     payload_hex=payload_hex_view,
                     protocol=top_proto,
                     summary=data["summary"],
@@ -796,9 +817,7 @@ class PcapAnalyzer:
         results.sort(key=lambda x: x.packet_count, reverse=True)
 
         return {
-            "tcp_sessions": [
-                asdict(s) for s in results[:50]
-            ],  # Limit to top 50 sessions
+            "tcp_sessions": [asdict(s) for s in results[:MAX_TCP_SESSIONS_OUTPUT]],
             "total_sessions": len(results),
         }
 

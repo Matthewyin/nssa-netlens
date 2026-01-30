@@ -3,6 +3,7 @@ import './SettingsModal.css';
 
 function SettingsModal({ isOpen, onClose }) {
   const [outputDir, setOutputDir] = useState('');
+  const [wiresharkPath, setWiresharkPath] = useState('');
   const [profiles, setProfiles] = useState([]);
   const [activeProfileId, setActiveProfileId] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
@@ -29,6 +30,7 @@ function SettingsModal({ isOpen, onClose }) {
       try {
         await window.electronAPI.saveSettings({ 
           outputDir,
+          wiresharkPath,
           aiProfiles: profiles,
           activeProfileId
         });
@@ -42,13 +44,14 @@ function SettingsModal({ isOpen, onClose }) {
     return () => {
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
-  }, [outputDir, profiles, activeProfileId, isLoaded]);
+  }, [outputDir, wiresharkPath, profiles, activeProfileId, isLoaded]);
 
   const loadSettings = async () => {
     try {
       if (window.electronAPI.getSettings) {
           const settings = await window.electronAPI.getSettings();
           setOutputDir(settings.outputDir || '');
+          setWiresharkPath(settings.wiresharkPath || '');
           setProfiles(settings.aiProfiles || []);
           setActiveProfileId(settings.activeProfileId || '');
           setIsLoaded(true);
@@ -147,6 +150,18 @@ function SettingsModal({ isOpen, onClose }) {
                 </button>
               </div>
               <p className="setting-desc">分析报告（如故障诊断日志）将保存到此目录。</p>
+            </div>
+            <div className="setting-item">
+              <label>Wireshark 路径</label>
+              <div className="input-group">
+                <input 
+                  type="text" 
+                  value={wiresharkPath} 
+                  onChange={(e) => setWiresharkPath(e.target.value)}
+                  placeholder="/Applications/Wireshark.app/Contents/MacOS/Wireshark" 
+                />
+              </div>
+              <p className="setting-desc">Wireshark 可执行文件路径，用于"在 Wireshark 中打开"功能。</p>
             </div>
           </div>
 

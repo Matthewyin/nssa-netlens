@@ -28,11 +28,17 @@ function decrypt(text) {
 
 const DEFAULT_WIDTH = 1400;
 const DEFAULT_HEIGHT = 900;
+const DEFAULT_WIRESHARK_PATH = '/Applications/Wireshark.app/Contents/MacOS/Wireshark';
 
 // Initialize default settings
 if (!store.get('outputDir')) {
   const documentsPath = app.getPath('documents');
   store.set('outputDir', path.join(documentsPath, 'MacPcapAnalyzer', 'Reports'));
+}
+
+// Initialize Wireshark path
+if (!store.get('wiresharkPath')) {
+  store.set('wiresharkPath', DEFAULT_WIRESHARK_PATH);
 }
 
 // AI Settings & Migration
@@ -129,7 +135,7 @@ function createWindow() {
   const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
   
   if (isDev) {
-    mainWindow.loadURL('http://localhost:5173');
+    mainWindow.loadURL('http://localhost:61111');
     mainWindow.webContents.openDevTools();
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
@@ -161,6 +167,7 @@ ipcMain.handle('get-settings', () => {
 
   return {
     outputDir: store.get('outputDir'),
+    wiresharkPath: store.get('wiresharkPath') || DEFAULT_WIRESHARK_PATH,
     aiProfiles: profiles,
     activeProfileId: store.get('activeProfileId')
   };
@@ -168,6 +175,7 @@ ipcMain.handle('get-settings', () => {
 
 ipcMain.handle('save-settings', (event, settings) => {
   if (settings.outputDir) store.set('outputDir', settings.outputDir);
+  if (settings.wiresharkPath !== undefined) store.set('wiresharkPath', settings.wiresharkPath);
   
   if (settings.aiProfiles) {
       const secureProfiles = settings.aiProfiles.map(p => ({
@@ -199,8 +207,7 @@ ipcMain.handle('zoom', (event, delta) => {
   }
 });
 
-// Helper to execute Python CLI
-const handleAnalyzePcap = async (filePath, analysisType, searchQuery) => {
+const runPythonCommand = (cliArgs, extraDevArgs = []) => {
   return new Promise((resolve, reject) => {
     const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
     
@@ -210,7 +217,6 @@ const handleAnalyzePcap = async (filePath, analysisType, searchQuery) => {
     if (isDev) {
       pythonCmd = 'uv';
       const pythonBackendPath = path.join(__dirname, '..', '..', 'backend');
-      const outputDir = store.get('outputDir');
       args = [
         'run',
         '--directory',
@@ -218,16 +224,12 @@ const handleAnalyzePcap = async (filePath, analysisType, searchQuery) => {
         'python',
         '-m',
         'pcap_analyzer.cli',
-        analysisType,
-        filePath,
-        '--output-dir',
-        outputDir || '',
-        '--search',
-        searchQuery || ''
+        ...cliArgs,
+        ...extraDevArgs
       ];
     } else {
       pythonCmd = path.join(process.resourcesPath, 'python-backend', 'server');
-      args = [analysisType, filePath];
+      args = cliArgs;
     }
 
     const childProcess = spawn(pythonCmd, args);
@@ -258,181 +260,27 @@ const handleAnalyzePcap = async (filePath, analysisType, searchQuery) => {
 };
 
 ipcMain.handle('analyze-pcap', async (event, filePath, analysisType, searchQuery) => {
-  return await handleAnalyzePcap(filePath, analysisType, searchQuery);
+  const outputDir = store.get('outputDir');
+  return runPythonCommand(
+    [analysisType, filePath],
+    ['--output-dir', outputDir || '', '--search', searchQuery || '']
+  );
 });
 
 ipcMain.handle('get-packet-details', async (event, filePath, frameNumber) => {
-  return new Promise((resolve, reject) => {
-    const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
-    
-    let pythonCmd;
-    let args;
-    
-    if (isDev) {
-      pythonCmd = 'uv';
-      const pythonBackendPath = path.join(__dirname, '..', '..', 'backend');
-      args = [
-        'run',
-        '--directory',
-        pythonBackendPath,
-        'python',
-        '-m',
-        'pcap_analyzer.cli',
-        'packet_details',
-        filePath,
-        '--frame',
-        frameNumber.toString()
-      ];
-    } else {
-      pythonCmd = path.join(process.resourcesPath, 'python-backend', 'server');
-      args = ['packet_details', filePath, '--frame', frameNumber.toString()];
-    }
-
-    const childProcess = spawn(pythonCmd, args);
-    let stdout = '';
-    let stderr = '';
-
-    childProcess.stdout.on('data', (data) => {
-      stdout += data.toString();
-    });
-
-    childProcess.stderr.on('data', (data) => {
-      stderr += data.toString();
-    });
-
-    childProcess.on('close', (code) => {
-      if (code === 0) {
-        try {
-          const result = JSON.parse(stdout);
-          resolve(result);
-        } catch (e) {
-          reject(new Error(`Failed to parse JSON: ${e.message}`));
-        }
-      } else {
-        reject(new Error(`Python process exited with code ${code}: ${stderr}`));
-      }
-    });
-  });
+  return runPythonCommand(['packet_details', filePath, '--frame', frameNumber.toString()]);
 });
-
-const handleAnalyzeCorrelation = async (file1, file2) => {
-  return new Promise((resolve, reject) => {
-    const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
-    
-    let pythonCmd;
-    let args;
-    
-    if (isDev) {
-      pythonCmd = 'uv';
-      const pythonBackendPath = path.join(__dirname, '..', '..', 'backend');
-      args = [
-        'run',
-        '--directory',
-        pythonBackendPath,
-        'python',
-        '-m',
-        'pcap_analyzer.cli',
-        'correlate',
-        file1,
-        '--file2',
-        file2
-      ];
-    } else {
-      pythonCmd = path.join(process.resourcesPath, 'python-backend', 'server');
-      args = ['correlate', file1, '--file2', file2];
-    }
-
-    const childProcess = spawn(pythonCmd, args);
-    let stdout = '';
-    let stderr = '';
-
-    childProcess.stdout.on('data', (data) => {
-      stdout += data.toString();
-    });
-
-    childProcess.stderr.on('data', (data) => {
-      stderr += data.toString();
-    });
-
-    childProcess.on('close', (code) => {
-      if (code === 0) {
-        try {
-          const result = JSON.parse(stdout);
-          resolve(result);
-        } catch (e) {
-          reject(new Error(`Failed to parse JSON: ${e.message}`));
-        }
-      } else {
-        reject(new Error(`Python process exited with code ${code}: ${stderr}`));
-      }
-    });
-  });
-};
 
 ipcMain.handle('analyze-correlation', async (event, file1, file2) => {
-  return await handleAnalyzeCorrelation(file1, file2);
+  return runPythonCommand(['correlate', file1, '--file2', file2]);
 });
 
-const handleAnalyzeLinkTrace = async (file1, file2) => {
-  return new Promise((resolve, reject) => {
-    const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
-    
-    let pythonCmd;
-    let args;
-    
-    if (isDev) {
-      pythonCmd = 'uv';
-      const pythonBackendPath = path.join(__dirname, '..', '..', 'backend');
-      args = [
-        'run',
-        '--directory',
-        pythonBackendPath,
-        'python',
-        '-m',
-        'pcap_analyzer.cli',
-        'link_trace',
-        file1
-      ];
-      if (file2) {
-        args.push('--file2', file2);
-      }
-    } else {
-      pythonCmd = path.join(process.resourcesPath, 'python-backend', 'server');
-      args = ['link_trace', file1];
-      if (file2) {
-        args.push('--file2', file2);
-      }
-    }
-
-    const childProcess = spawn(pythonCmd, args);
-    let stdout = '';
-    let stderr = '';
-
-    childProcess.stdout.on('data', (data) => {
-      stdout += data.toString();
-    });
-
-    childProcess.stderr.on('data', (data) => {
-      stderr += data.toString();
-    });
-
-    childProcess.on('close', (code) => {
-      if (code === 0) {
-        try {
-          const result = JSON.parse(stdout);
-          resolve(result);
-        } catch (e) {
-          reject(new Error(`Failed to parse JSON: ${e.message}`));
-        }
-      } else {
-        reject(new Error(`Python process exited with code ${code}: ${stderr}`));
-      }
-    });
-  });
-};
-
 ipcMain.handle('analyze-link-trace', async (event, file1, file2) => {
-  return await handleAnalyzeLinkTrace(file1, file2);
+  const args = ['link_trace', file1];
+  if (file2) {
+    args.push('--file2', file2);
+  }
+  return runPythonCommand(args);
 });
 
 ipcMain.handle('copy-to-clipboard', (event, text) => {
@@ -443,7 +291,7 @@ ipcMain.handle('copy-to-clipboard', (event, text) => {
 ipcMain.handle('open-in-wireshark', async (event, pcapFile, frameNumber) => {
   const { exec } = require('child_process');
   return new Promise((resolve, reject) => {
-    const wiresharkPath = '/Applications/Wireshark.app/Contents/MacOS/Wireshark';
+    const wiresharkPath = store.get('wiresharkPath') || DEFAULT_WIRESHARK_PATH;
     const args = frameNumber ? `-r "${pcapFile}" -g ${frameNumber}` : `-r "${pcapFile}"`;
     exec(`"${wiresharkPath}" ${args}`, (error) => {
       if (error) {
@@ -690,16 +538,15 @@ ipcMain.handle('ask-ai', async (event, message, filePath) => {
             
             let result;
             if (functionName === 'analyze_correlation') {
-                 result = await handleAnalyzeCorrelation(functionArgs.file_a, functionArgs.file_b);
+                 result = await runPythonCommand(['correlate', functionArgs.file_a, '--file2', functionArgs.file_b]);
             } else {
                 let analysisType = functionName;
                 if (functionName === 'get_pcap_summary') analysisType = 'pcap_summary';
                 if (functionName === 'scan_security_threats') analysisType = 'security_scan';
                 if (functionName === 'analyze_tcp_anomalies') analysisType = 'tcp_anomalies';
 
-                // Use provided filepath or default to first selected file
                 const targetFile = functionArgs.filepath || (Array.isArray(filePath) ? filePath[0] : filePath);
-                result = await handleAnalyzePcap(targetFile, analysisType, "");
+                result = await runPythonCommand([analysisType, targetFile], ['--output-dir', '', '--search', '']);
             }
             
             if (responseMessage.tool_calls) {
@@ -735,59 +582,7 @@ ipcMain.handle('ask-ai', async (event, message, filePath) => {
 });
 
 ipcMain.handle('get-tcp-stream-packets', async (event, filePath, streamId, page) => {
-  return new Promise((resolve, reject) => {
-    const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
-    
-    let pythonCmd;
-    let args;
-    
-    if (isDev) {
-      pythonCmd = 'uv';
-      const pythonBackendPath = path.join(__dirname, '..', '..', 'backend');
-      args = [
-        'run',
-        '--directory',
-        pythonBackendPath,
-        'python',
-        '-m',
-        'pcap_analyzer.cli',
-        'tcp_stream_packets',
-        filePath,
-        '--stream',
-        streamId,
-        '--page',
-        page.toString()
-      ];
-    } else {
-      pythonCmd = path.join(process.resourcesPath, 'python-backend', 'server');
-      args = ['tcp_stream_packets', filePath, '--stream', streamId, '--page', page.toString()];
-    }
-
-    const childProcess = spawn(pythonCmd, args);
-    let stdout = '';
-    let stderr = '';
-
-    childProcess.stdout.on('data', (data) => {
-      stdout += data.toString();
-    });
-
-    childProcess.stderr.on('data', (data) => {
-      stderr += data.toString();
-    });
-
-    childProcess.on('close', (code) => {
-      if (code === 0) {
-        try {
-          const result = JSON.parse(stdout);
-          resolve(result);
-        } catch (e) {
-          reject(new Error(`Failed to parse JSON: ${e.message}`));
-        }
-      } else {
-        reject(new Error(`Python process exited with code ${code}: ${stderr}`));
-      }
-    });
-  });
+  return runPythonCommand(['tcp_stream_packets', filePath, '--stream', streamId, '--page', page.toString()]);
 });
 
 app.whenReady().then(() => {

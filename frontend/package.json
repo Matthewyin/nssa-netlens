@@ -1,12 +1,12 @@
 {
   "name": "netlens",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "Network Traffic Analysis & Visualization Tool",
   "main": "electron/main.js",
   "scripts": {
     "dev": "concurrently \"npm:dev:react\" \"npm:dev:electron\"",
     "dev:react": "vite",
-    "dev:electron": "wait-on http://localhost:5173 && electron .",
+    "dev:electron": "wait-on http://localhost:61111 && electron .",
     "build": "vite build && electron-builder",
     "build:mac": "vite build && electron-builder --mac",
     "preview": "vite preview"
