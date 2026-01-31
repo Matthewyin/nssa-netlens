@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getSettings: () => ipcRenderer.invoke('get-settings'),
   saveSettings: (settings) => ipcRenderer.invoke('save-settings', settings),
   selectOutputDirectory: () => ipcRenderer.invoke('select-output-directory'),
+  selectWiresharkPath: () => ipcRenderer.invoke('select-wireshark-path'),
   getPacketDetails: (filePath, frameNumber) => ipcRenderer.invoke('get-packet-details', filePath, frameNumber),
   analyzeCorrelation: (file1, file2) => ipcRenderer.invoke('analyze-correlation', file1, file2),
   analyzeLinkTrace: (file1, file2) => ipcRenderer.invoke('analyze-link-trace', file1, file2),
@@ -14,4 +15,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   verifyAiConfig: (config) => ipcRenderer.invoke('verify-ai-config', config),
   copyToClipboard: (text) => ipcRenderer.invoke('copy-to-clipboard', text),
   openInWireshark: (pcapFile, frameNumber) => ipcRenderer.invoke('open-in-wireshark', pcapFile, frameNumber),
+  onAnalysisProgress: (callback) => ipcRenderer.on('analysis-progress', (_event, value) => callback(value)),
+  offAnalysisProgress: () => ipcRenderer.removeAllListeners('analysis-progress'),
+  exportReport: (format, sourcePath, content) => ipcRenderer.invoke('export-report', format, sourcePath, content),
+  openExternal: (url) => ipcRenderer.invoke('open-external', url),
 });

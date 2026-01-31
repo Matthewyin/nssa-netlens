@@ -60,7 +60,7 @@ function DiagnosticsPanel({ data, filePath }) {
             
             <div className="diag-meta">
               <span className="alert-badge badge-medium">{session.events_count} Events</span>
-              <span style={{color: '#ef4444', fontWeight: 600}}>
+              <span className="diag-issue-count">
                 {Object.values(session.anomaly_summary).reduce((a, b) => a + b, 0)} Issues
               </span>
             </div>
@@ -74,7 +74,7 @@ function DiagnosticsPanel({ data, filePath }) {
           <>
             <div className="diag-flow-panel">
                 <div className="diag-detail-header">
-                  <div className="diag-detail-title" style={{color: 'var(--text-primary)'}}>
+                  <div className="diag-detail-title">
                     Session #{selectedSession.stream_id}: {selectedSession.src} ↔ {selectedSession.dst}
                   </div>
                 </div>
@@ -89,14 +89,12 @@ function DiagnosticsPanel({ data, filePath }) {
 
             <div className="diag-detail-panel">
                 {isLoadingDetails && (
-                  <div style={{marginTop: '20px', color: '#94a3b8', textAlign: 'center'}}>
-                    Loading packet details...
-                  </div>
+                  <div className="diag-loading">Loading packet details...</div>
                 )}
 
                 {selectedPacketDetails ? (
                   <div>
-                    <h4 style={{ margin: '0 0 16px 0', fontSize: '14px', color: '#e2e8f0', fontFamily: 'monospace' }}>
+                    <h4 className="diag-pkt-title">
                       Packet Details (Frame #{selectedPacketDetails._source?.layers?.frame?.['frame.number']})
                     </h4>
                     <PacketDetailTree 
@@ -106,7 +104,7 @@ function DiagnosticsPanel({ data, filePath }) {
                     />
                   </div>
                 ) : (
-                  <div style={{ color: '#64748b', textAlign: 'center', marginTop: '100px' }}>
+                  <div className="diag-empty-hint">
                     Click an arrow in the diagram to view details
                   </div>
                 )}

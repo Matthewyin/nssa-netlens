@@ -58,7 +58,7 @@ function HttpPanel({ data, filePath }) {
               {req.type === 'request' ? (
                   <span className={`http-method-badge method-${req.method?.toLowerCase()}`}>{req.method}</span>
               ) : (
-                  <span className={`http-method-badge`} style={{background: '#cbd5e1', color: '#475569'}}>RESP</span>
+                  <span className={`http-method-badge RESP`}>RESP</span>
               )}
               <span className={`http-status status-${String(req.status || '').charAt(0)}xx`}>
                   {req.status}
@@ -90,7 +90,7 @@ function HttpPanel({ data, filePath }) {
                     </div>
                 </div>
 
-                {isLoadingDetails && <div style={{color: '#94a3b8'}}>Loading details...</div>}
+                {isLoadingDetails && <div className="http-loading">Loading details...</div>}
                 
                 {selectedPacketDetails && (
                     <>

@@ -1,3 +1,5 @@
+/* TlsPanel Styles - Updated */
+
 .tls-container {
   display: flex;
   height: calc(100vh - 180px);
@@ -38,18 +40,17 @@
 }
 
 .tls-item.active {
-  background: rgba(59, 130, 246, 0.1);
-  border-left-color: var(--accent-blue);
+  background: rgba(168, 85, 247, 0.1);
+  border-left-color: var(--accent-purple);
 }
 
 .tls-sni {
   font-size: 13px;
-  font-weight: 600;
   color: var(--text-primary);
-  font-family: 'SF Mono', 'Menlo', monospace;
+  font-weight: 500;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .tls-meta {
@@ -63,13 +64,23 @@
   padding: 2px 6px;
   border-radius: 4px;
   font-weight: 700;
-  background: var(--accent-green-light);
-  color: var(--accent-green-hover);
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
 }
 
 .tls-cipher {
+  font-size: 10px;
   color: var(--text-muted);
-  font-family: monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: 'SF Mono', 'Menlo', monospace;
+}
+
+.tls-loading {
+  color: var(--text-muted);
+  text-align: center;
+  padding: 20px;
 }
 
 .tls-detail-header {
@@ -83,4 +94,19 @@
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: 8px;
+}
+
+.tls-detail-meta {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.tls-section-title {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  margin-top: 20px;
+  letter-spacing: 0.5px;
 }

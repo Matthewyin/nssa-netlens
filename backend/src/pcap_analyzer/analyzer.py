@@ -105,6 +105,140 @@ class PcapAnalyzer:
     def __init__(self, filepath: str | Path):
         self.filepath = Path(filepath)
 
+    def _report_progress(self, count: int, message: str = "") -> None:
+        import sys
+
+        # Report every 1000 packets to avoid I/O overhead
+        if count % 1000 == 0:
+            data = {"type": "progress", "count": count, "message": message}
+            print(f"PROGRESS:{json.dumps(data)}", file=sys.stderr, flush=True)
+
+    def generate_html_report(self, analysis_type: str, data: dict[str, Any]) -> str:
+        import datetime
+
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        filename = self.filepath.name
+
+        html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <title>NetLens Analysis Report - {analysis_type}</title>
+            <style>
+                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; }}
+                h1 {{ color: #1e40af; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }}
+                h2 {{ color: #1e3a8a; margin-top: 30px; }}
+                .meta {{ color: #64748b; font-size: 0.9em; margin-bottom: 30px; }}
+                .card {{ background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 20px; }}
+                .stat-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }}
+                .stat-item {{ background: white; padding: 15px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }}
+                .stat-label {{ color: #64748b; font-size: 0.85em; display: block; }}
+                .stat-value {{ color: #0f172a; font-size: 1.5em; font-weight: bold; }}
+                table {{ width: 100%; border-collapse: collapse; margin-top: 10px; background: white; }}
+                th, td {{ padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }}
+                th {{ background: #f1f5f9; color: #475569; font-weight: 600; }}
+                tr:hover {{ background: #f8fafc; }}
+                .badge {{ padding: 2px 8px; border-radius: 4px; font-size: 0.85em; font-weight: 500; }}
+                .badge-red {{ background: #fee2e2; color: #991b1b; }}
+                .badge-green {{ background: #dcfce7; color: #166534; }}
+                .badge-blue {{ background: #dbeafe; color: #1e40af; }}
+            </style>
+        </head>
+        <body>
+            <h1>NetLens Analysis Report</h1>
+            <div class="meta">
+                <p><strong>File:</strong> {filename}</p>
+                <p><strong>Type:</strong> {analysis_type}</p>
+                <p><strong>Generated:</strong> {timestamp}</p>
+            </div>
+        """
+
+        if analysis_type == "pcap_summary":
+            summary = data.get("summary", {})
+            protocols = data.get("protocols", [])
+
+            html += f"""
+            <div class="card">
+                <h2>Summary Overview</h2>
+                <div class="stat-grid">
+                    <div class="stat-item">
+                        <span class="stat-label">Total Packets</span>
+                        <span class="stat-value">{summary.get("total_packets", 0):,}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Total Bytes</span>
+                        <span class="stat-value">{summary.get("total_bytes", 0):,}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Duration</span>
+                        <span class="stat-value">{summary.get("duration_seconds", 0)}s</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>Protocol Distribution</h2>
+                <table>
+                    <thead><tr><th>Protocol</th><th>Count</th><th>Percentage</th></tr></thead>
+                    <tbody>
+            """
+            for p in protocols:
+                html += f"<tr><td>{p.get('name')}</td><td>{p.get('count')}</td><td>{p.get('percentage')}%</td></tr>"
+
+            html += "</tbody></table></div>"
+
+        elif analysis_type == "security_scan":
+            alerts = data.get("security_alerts", [])
+            html += f"""
+            <div class="card">
+                <h2>Security Alerts ({len(alerts)})</h2>
+                <table>
+                    <thead><tr><th>Severity</th><th>Type</th><th>Source</th><th>Description</th></tr></thead>
+                    <tbody>
+            """
+            for alert in alerts:
+                severity = alert.get("severity", "Low")
+                badge_class = "badge-red" if severity == "High" else "badge-blue"
+                html += f"""
+                <tr>
+                    <td><span class="badge {badge_class}">{severity}</span></td>
+                    <td>{alert.get("alert_type")}</td>
+                    <td>{alert.get("source_ip")}</td>
+                    <td>{alert.get("description")}</td>
+                </tr>
+                """
+            html += "</tbody></table></div>"
+
+        elif analysis_type == "tcp_anomalies":
+            sessions = data.get("anomalous_sessions", [])
+            html += f"""
+            <div class="card">
+                <h2>TCP Anomalies ({len(sessions)} Sessions)</h2>
+                <table>
+                    <thead><tr><th>Stream</th><th>Source</th><th>Destination</th><th>Issues</th></tr></thead>
+                    <tbody>
+            """
+            for s in sessions:
+                issues = ", ".join(
+                    [f"{k}: {v}" for k, v in s.get("anomaly_summary", {}).items()]
+                )
+                html += f"""
+                <tr>
+                    <td>Stream #{s.get("stream_id")}</td>
+                    <td>{s.get("src")}</td>
+                    <td>{s.get("dst")}</td>
+                    <td><span class="badge badge-red">{issues}</span></td>
+                </tr>
+                """
+            html += "</tbody></table></div>"
+
+        html += """
+        </body>
+        </html>
+        """
+        return html
+
     def _save_report(
         self, data: dict, report_type: str, output_dir: str | None = None
     ) -> None:
@@ -124,6 +258,17 @@ class PcapAnalyzer:
 
             with open(report_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
+
+            try:
+                html_content = self.generate_html_report(report_type, data)
+                html_path = save_dir / f"{report_type}_{Path(self.filepath).name}.html"
+                with open(html_path, "w", encoding="utf-8") as f:
+                    f.write(html_content)
+                data["saved_html_path"] = str(html_path)
+            except Exception as e:
+                import sys
+
+                print(f"Error generating HTML report: {e}", file=sys.stderr)
 
             data["saved_path"] = str(report_path)
         except Exception as e:
@@ -166,6 +311,7 @@ class PcapAnalyzer:
         ]
 
         protocol_counter: Counter[str] = Counter()
+        # pyright: ignore
         ip_stats: dict[str, dict[str, int]] = defaultdict(
             lambda: {"sent": 0, "received": 0, "bytes_sent": 0, "bytes_received": 0}
         )
@@ -174,7 +320,7 @@ class PcapAnalyzer:
         total_bytes = 0
         total_packets = 0
 
-        # Timeline buckets (1 second resolution)
+        # pyright: ignore
         timeline_buckets: dict[int, dict[str, int]] = defaultdict(
             lambda: {"bytes": 0, "packets": 0}
         )
@@ -183,6 +329,7 @@ class PcapAnalyzer:
         try:
             for row in tshark.stream_fields(str(self.filepath), fields):
                 total_packets += 1
+                self._report_progress(total_packets, "Analyzing summary...")
                 pkt_len = int(row.get("frame.len", 0))
                 total_bytes += pkt_len
 
@@ -324,6 +471,7 @@ class PcapAnalyzer:
         total_responses = 0
 
         for pkt in packets:
+            # pyright: ignore
             layers = pkt.get("_source", {}).get("layers", {})
             if not layers:
                 continue
@@ -427,6 +575,7 @@ class PcapAnalyzer:
         }
 
         for pkt in packets:
+            # pyright: ignore
             layers = pkt.get("_source", {}).get("layers", {})
             if not layers:
                 continue
@@ -520,6 +669,7 @@ class PcapAnalyzer:
         }
 
         for pkt in packets:
+            # pyright: ignore
             layers = pkt.get("_source", {}).get("layers", {})
             if not layers:
                 continue
@@ -575,17 +725,22 @@ class PcapAnalyzer:
         alerts = []
 
         # 1. Port Scan Detection (SYN packets)
+        # pyright: ignore[reportGeneralTypeIssues]
         syn_tracker: dict[str, set[str]] = defaultdict(set)
+        scan_count = 0
         for row in tshark.stream_fields(
             str(self.filepath),
             ["ip.src", "tcp.dstport"],
             display_filter="tcp.flags.syn==1 and tcp.flags.ack==0",
         ):
+            scan_count += 1
+            self._report_progress(scan_count, "Scanning ports...")
             src = row.get("ip.src")
             port = row.get("tcp.dstport")
             if src and port:
                 syn_tracker[src].add(port)
 
+        # pyright: ignore
         for src_ip, ports in syn_tracker.items():
             if len(ports) > PORT_SCAN_THRESHOLD:
                 alerts.append(
@@ -616,11 +771,14 @@ class PcapAnalyzer:
         ]
 
         # Stream payload (only packets with data)
+        payload_count = 0
         for row in tshark.stream_fields(
             str(self.filepath),
             ["ip.src", "ip.dst", "tcp.payload"],
             display_filter="tcp.len > 0",
         ):
+            payload_count += 1
+            self._report_progress(payload_count, "Analyzing payloads...")
             payload_hex = row.get("tcp.payload")
             if not payload_hex:
                 continue
@@ -713,8 +871,8 @@ class PcapAnalyzer:
             "_ws.col.info",
         ]
 
-        # Using defaultdict to aggregate stream data
-        sessions = defaultdict(
+        # pyright: ignore
+        sessions: dict[str, dict[str, Any]] = defaultdict(
             lambda: {
                 "src": "",
                 "dst": "",
@@ -730,9 +888,12 @@ class PcapAnalyzer:
             }
         )
 
+        total_packets = 0
         for row in tshark.stream_fields(
             str(self.filepath), fields, display_filter="tcp"
         ):
+            total_packets += 1
+            self._report_progress(total_packets, "Analyzing TCP sessions...")
             stream_id = row.get("tcp.stream")
             if not stream_id:
                 continue
@@ -936,8 +1097,7 @@ class PcapAnalyzer:
         except Exception as e:
             return {"error": f"Tshark analysis failed: {str(e)}"}
 
-        # Aggregation Logic
-        # stream_id -> { "src": ip, "dst": ip, "anomalies": { "retrans": 0, ... }, "packets": [] }
+        # pyright: ignore
         streams = defaultdict(
             lambda: {
                 "src_ip": "",
@@ -951,7 +1111,11 @@ class PcapAnalyzer:
 
         total_anomalies = Counter()
 
+        current_packet = 0
         for pkt in packets:
+            # pyright: ignore
+            current_packet += 1
+            self._report_progress(current_packet, "Analyzing TCP anomalies...")
             layers = pkt.get("_source", {}).get("layers", {})
             if not layers:
                 continue

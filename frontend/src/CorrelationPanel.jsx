@@ -32,27 +32,9 @@ function CorrelationPanel({ data, files }) {
     
     return (
         <div className="corr-container">
-            <div className="summary-card">
-                <h3>关联结果</h3>
-                <div className="stats-grid">
-                    <div className="stat">
-                         <label>总匹配</label>
-                         <div className="value">{data.matches?.length || 0}</div>
-                    </div>
-                    <div className="stat">
-                         <label>丢包 (A-&gt;B)</label>
-                         <div className="value" style={{color: '#ef4444'}}>{data.lost_in_b_count || 0}</div>
-                    </div>
-                    <div className="stat">
-                         <label>时间偏移</label>
-                         <div className="value">{(data.estimated_time_offset || 0).toFixed(6)}s</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div className="corr-split-view" style={{display: 'flex', flex: 1, overflow: 'hidden', marginTop: '20px', border: '1px solid var(--border-color)', borderRadius: '8px', background: 'var(--bg-card)'}}>
-                <div className="corr-list" style={{width: '450px', overflowY: 'auto', borderRight: '1px solid var(--border-color)', marginTop: 0, borderRadius: 0, border: 'none', background: 'var(--bg-secondary)'}}>
-                    <div className="corr-header" style={{position: 'sticky', top: 0, zIndex: 10}}>
+            <div className="corr-split-view">
+                <div className="corr-list">
+                    <div className="corr-header">
                         <span>File A</span>
                         <span>Status</span>
                         <span>File B</span>
@@ -63,7 +45,6 @@ function CorrelationPanel({ data, files }) {
                             key={idx} 
                             className={`corr-row ${selectedMatch === m ? 'active' : ''}`}
                             onClick={() => handleRowClick(m)}
-                            style={{cursor: 'pointer', background: selectedMatch === m ? 'var(--bg-tertiary)' : ''}}
                         >
                             <span>#{m.frame_a}</span>
                             <span className="corr-status match">↔</span>
@@ -76,7 +57,6 @@ function CorrelationPanel({ data, files }) {
                             key={'lost'+idx} 
                             className="corr-row lost"
                             onClick={() => handleRowClick({ frame_a: f, frame_b: null })}
-                            style={{cursor: 'pointer'}}
                         >
                              <span>#{f}</span>
                              <span className="corr-status lost">×</span>
@@ -86,12 +66,12 @@ function CorrelationPanel({ data, files }) {
                     ))}
                 </div>
                 
-                <div className="corr-details" style={{flex: 1, padding: '20px', overflowY: 'auto', background: 'var(--bg-primary)'}}>
+                <div className="corr-details">
                      {selectedMatch ? (
-                         <div style={{display: 'flex', gap: '20px', height: '100%'}}>
-                             <div style={{flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column'}}>
-                                 <h4 style={{marginBottom: '10px', color: 'var(--text-primary)'}}>File A: Frame #{selectedMatch.frame_a}</h4>
-                                 <div style={{flex: 1, overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '10px', background: 'var(--bg-tertiary)'}}>
+                         <div className="corr-compare-grid">
+                             <div className="corr-compare-col">
+                                 <h4>File A: Frame #{selectedMatch.frame_a}</h4>
+                                 <div className="corr-compare-content">
                                      {detailA ? (
                                          <PacketDetailTree data={detailA._source?.layers} label="Packet A" initialExpanded={true} />
                                      ) : (
@@ -100,9 +80,9 @@ function CorrelationPanel({ data, files }) {
                                  </div>
                              </div>
                              
-                             <div style={{flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column'}}>
-                                 <h4 style={{marginBottom: '10px', color: 'var(--text-primary)'}}>File B: {selectedMatch.frame_b ? `Frame #${selectedMatch.frame_b}` : 'MISSING'}</h4>
-                                 <div style={{flex: 1, overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '10px', background: 'var(--bg-tertiary)'}}>
+                             <div className="corr-compare-col">
+                                 <h4>File B: {selectedMatch.frame_b ? `Frame #${selectedMatch.frame_b}` : 'MISSING'}</h4>
+                                 <div className="corr-compare-content">
                                      {selectedMatch.frame_b ? (
                                          detailB ? (
                                             <PacketDetailTree data={detailB._source?.layers} label="Packet B" initialExpanded={true} />
@@ -110,7 +90,7 @@ function CorrelationPanel({ data, files }) {
                                             <div>Loading...</div>
                                          )
                                      ) : (
-                                         <div style={{color: '#ef4444', fontWeight: 'bold'}}>Packet missing in File B</div>
+                                         <div className="corr-missing-text">Packet missing in File B</div>
                                      )}
                                  </div>
                              </div>

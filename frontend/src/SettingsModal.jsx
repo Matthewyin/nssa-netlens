@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import './SettingsModal.css';
+import './SettingsModal.css';
 
 function SettingsModal({ isOpen, onClose }) {
   const [outputDir, setOutputDir] = useState('');
@@ -72,6 +73,17 @@ function SettingsModal({ isOpen, onClose }) {
     }
   };
 
+  const handleSelectWireshark = async () => {
+    try {
+      const path = await window.electronAPI.selectWiresharkPath();
+      if (path) {
+        setWiresharkPath(path);
+      }
+    } catch (err) {
+      console.error('Failed to select Wireshark path:', err);
+    }
+  };
+
   const activeProfile = profiles.find(p => p.id === activeProfileId) || {};
 
   const handleProfileChange = (key, value) => {
@@ -120,7 +132,7 @@ function SettingsModal({ isOpen, onClose }) {
     <div className="modal-overlay">
       <div className="modal-content">
         <div className="modal-header">
-          <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
+          <div className="setting-header">
             <h2>设置</h2>
             {isLoaded && (
                 <span className={`save-status status-${saveStatus}`}>
@@ -136,18 +148,16 @@ function SettingsModal({ isOpen, onClose }) {
         <div className="modal-body">
           <div className="setting-section">
             <h3 className="section-title">常规设置</h3>
-            <div className="setting-item">
+          <div className="setting-item">
               <label>报告保存目录</label>
               <div className="input-group">
                 <input 
                   type="text" 
                   value={outputDir} 
                   readOnly 
-                  placeholder="选择目录..." 
+                  placeholder="选择保存目录..." 
                 />
-                <button className="btn-secondary" onClick={handleSelectDir}>
-                  浏览...
-                </button>
+                <button className="btn-secondary" onClick={handleSelectDir}>选择</button>
               </div>
               <p className="setting-desc">分析报告（如故障诊断日志）将保存到此目录。</p>
             </div>
@@ -160,17 +170,18 @@ function SettingsModal({ isOpen, onClose }) {
                   onChange={(e) => setWiresharkPath(e.target.value)}
                   placeholder="/Applications/Wireshark.app/Contents/MacOS/Wireshark" 
                 />
+                <button className="btn-secondary" onClick={handleSelectWireshark}>选择</button>
               </div>
               <p className="setting-desc">Wireshark 可执行文件路径，用于"在 Wireshark 中打开"功能。</p>
             </div>
           </div>
 
           <div className="setting-section">
-            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px'}}>
-                <h3 className="section-title" style={{margin: 0, border: 'none'}}>AI 助手配置 (LLM)</h3>
+            <div className="setting-section-header">
+                <h3 className="section-title">AI 助手配置 (LLM)</h3>
                 <div className="profile-actions">
                     <button className="btn-icon" onClick={handleAddProfile} title="新建配置">
-                        <svg viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        <span>+</span>
                     </button>
                     {profiles.length > 1 && (
                         <button className="btn-icon danger" onClick={handleDeleteProfile} title="删除当前配置">
@@ -236,7 +247,7 @@ function SettingsModal({ isOpen, onClose }) {
                       />
                     </div>
                     
-                    <div className="setting-item" style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
+                    <div className="setting-item">
                         <button 
                           className="btn-secondary" 
                           onClick={handleVerify} 

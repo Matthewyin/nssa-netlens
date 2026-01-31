@@ -108,13 +108,13 @@ function AiChatSidebar({ isOpen, onClose, filePaths }) {
 
   return (
     <div className={`ai-sidebar ${isOpen ? 'open' : 'closed'} ${isWide ? 'wide' : ''}`}>
-      <div className="ai-sidebar-header">
+        <div className="ai-sidebar-header sidebar-open">
         <div className="ai-title">
           <span className="ai-icon">🤖</span>
           <span>AI 分析师</span>
         </div>
-        <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
-            <button className="ai-resize-btn" onClick={() => setIsWide(!isWide)} title={isWide ? "收起" : "展开"} style={{background:'none', border:'none', color:'var(--text-muted)', cursor:'pointer', fontSize: '18px'}}>
+          <div className="ai-header-content">
+            <button className="ai-resize-btn" onClick={() => setIsWide(!isWide)} title={isWide ? "收起" : "展开"}>
                 {isWide ? '»' : '«'} 
             </button>
             <button className="ai-close-btn" onClick={onClose}>×</button>

@@ -22,13 +22,36 @@
 }
 
 .ai-sidebar-header {
-  padding: 16px;
-  border-bottom: 1px solid var(--border-color);
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  background: var(--bg-card);
+  gap: 8px;
 }
+
+.ai-header-content {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.profile-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.ai-resize-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 18px;
+  padding: 4px 8px;
+}
+
+.ai-resize-btn:hover {
+  color: var(--text-primary);
+}
+
 
 .ai-title {
   display: flex;

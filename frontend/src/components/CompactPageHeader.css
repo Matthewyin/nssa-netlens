@@ -1,0 +1,85 @@
+.compact-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border-color);
+    height: 64px; /* Fixed compact height */
+    box-sizing: border-box;
+    gap: 24px;
+}
+
+.header-left {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    min-width: max-content;
+}
+
+.header-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+    line-height: 1.2;
+}
+
+.header-filename {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: 'SF Mono', 'Menlo', monospace;
+    background: var(--bg-tertiary);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.header-center {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex: 1;
+    overflow: hidden;
+}
+
+.header-stat {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+    font-size: 13px;
+}
+
+.stat-label {
+    color: var(--text-muted);
+}
+
+.stat-value {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-family: 'SF Mono', 'Menlo', monospace;
+}
+
+.stat-value.success { color: var(--accent-green); }
+.stat-value.warning { color: var(--accent-orange); }
+.stat-value.danger { color: var(--accent-red); }
+
+.stat-divider {
+    width: 1px;
+    height: 12px;
+    background: var(--border-color);
+    margin-left: 16px;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+/* Ensure SearchBar fits nicely if passed as extraContent */
+.compact-header .search-container {
+    width: 240px;
+    display: flex;
+    align-items: center;
+}

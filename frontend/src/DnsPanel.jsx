@@ -61,7 +61,7 @@ function DnsPanel({ data, filePath }) {
                     </div>
                 </div>
 
-                {isLoadingDetails && <div style={{color: '#94a3b8'}}>Loading details...</div>}
+                {isLoadingDetails && <div className="dns-loading">Loading details...</div>}
                 
                 {selectedPacketDetails && (
                     <>

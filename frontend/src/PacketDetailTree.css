@@ -1,0 +1,58 @@
+.pdt-leaf {
+  padding-left: 20px;
+  font-family: 'SF Mono', 'Menlo', 'Monaco', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.pdt-leaf-label {
+  color: var(--text-muted);
+}
+
+.pdt-leaf-value {
+  color: var(--accent-blue);
+}
+
+.pdt-node {
+  padding-left: 10px;
+}
+
+.pdt-node-header {
+  cursor: pointer;
+  font-family: 'SF Mono', 'Menlo', 'Monaco', monospace;
+  font-size: 13px;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  line-height: 1.5;
+  padding: 2px 0;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast);
+}
+
+.pdt-node-header:hover {
+  background: var(--bg-tertiary);
+}
+
+.pdt-toggle {
+  margin-right: 5px;
+  font-size: 10px;
+  width: 12px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.pdt-label {
+  font-weight: 600;
+}
+
+.pdt-count {
+  color: var(--text-muted);
+  margin-left: 5px;
+  font-weight: 400;
+}
+
+.pdt-children {
+  border-left: 1px solid var(--border-color);
+  margin-left: 5px;
+}

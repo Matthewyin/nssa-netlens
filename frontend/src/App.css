@@ -1068,3 +1068,117 @@ body {
     min-width: 50px;
     text-align: center;
 }
+
+.session-card--compact {
+  padding: 0;
+  overflow: hidden;
+}
+
+.proto-tag-blue {
+  background: var(--accent-blue);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: bold;
+  margin-right: 8px;
+}
+
+.expand-arrow {
+  margin-left: auto;
+  display: inline-block;
+  transition: transform 0.2s;
+}
+
+.expand-arrow--rotated {
+  transform: rotate(180deg);
+}
+
+.stream-list--padded {
+  padding: 10px;
+}
+
+.loading-text {
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.pagination-row {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px;
+}
+
+.page-indicator {
+  align-self: center;
+  font-size: 12px;
+}
+
+.value--danger {
+  color: var(--accent-red);
+}
+
+.value--warning {
+  color: var(--accent-orange);
+}
+
+.empty-state--compact {
+  height: 200px;
+  background: var(--bg-card);
+  border-radius: 12px;
+}
+
+.success-message {
+  font-size: 16px;
+  color: var(--accent-green);
+}
+
+.sidebar-brand {
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 60px;
+}
+
+.app-logo {
+  width: 28px;
+  height: 28px;
+}
+
+.app-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.icon-plus {
+  font-size: 18px;
+}
+
+.result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.result-header--padded {
+  padding: 24px 32px 0 32px;
+}
+
+.result-title {
+  margin: 0;
+}
+
+.result-subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.search-container {
+  width: 300px;
+}

@@ -1,3 +1,5 @@
+/* HttpPanel Styles - Updated */
+
 .http-container {
   display: flex;
   height: calc(100vh - 180px);
@@ -67,6 +69,11 @@
   text-transform: uppercase;
 }
 
+.http-method-badge.RESP {
+  background: #cbd5e1;
+  color: #475569;
+}
+
 .http-status {
   margin-left: auto;
   font-size: 12px;
@@ -121,4 +128,8 @@
   border: 1px solid #334155;
   max-height: 400px;
   overflow-y: auto;
+}
+
+.http-loading {
+  color: var(--text-muted);
 }

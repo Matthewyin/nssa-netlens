@@ -42,7 +42,7 @@ function TlsPanel({ data, filePath }) {
                 {hs.type === 'ServerHello' ? (
                     <span className="tls-cipher">{hs.cipher || 'Unknown Cipher'}</span>
                 ) : (
-                    <span className="tls-cipher" style={{fontSize: '10px'}}>{hs.type}</span>
+                    <span className="tls-cipher text-small">{hs.type}</span>
                 )}
             </div>
           </div>
@@ -58,7 +58,7 @@ function TlsPanel({ data, filePath }) {
                     </div>
                 </div>
 
-                {isLoadingDetails && <div style={{color: '#94a3b8'}}>Loading details...</div>}
+                {isLoadingDetails && <div className="tls-loading">Loading details...</div>}
                 
                 {selectedPacketDetails && (
                     <PacketDetailTree 

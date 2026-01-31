@@ -189,6 +189,21 @@ ipcMain.handle('save-settings', (event, settings) => {
   return true;
 });
 
+ipcMain.handle('select-wireshark-path', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openFile'],
+    filters: [
+      { name: 'Applications', extensions: ['app', 'exe'] },
+      { name: 'All Files', extensions: ['*'] }
+    ]
+  });
+  
+  if (!result.canceled && result.filePaths.length > 0) {
+    return result.filePaths[0];
+  }
+  return null;
+});
+
 ipcMain.handle('select-output-directory', async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
     properties: ['openDirectory', 'createDirectory']
@@ -235,13 +250,35 @@ const runPythonCommand = (cliArgs, extraDevArgs = []) => {
     const childProcess = spawn(pythonCmd, args);
     let stdout = '';
     let stderr = '';
+    let stderrBuffer = '';
 
     childProcess.stdout.on('data', (data) => {
       stdout += data.toString();
     });
 
     childProcess.stderr.on('data', (data) => {
-      stderr += data.toString();
+      const chunk = data.toString();
+      stderr += chunk;
+      
+      // Process progress updates
+      stderrBuffer += chunk;
+      const lines = stderrBuffer.split('\n');
+      // Keep the last incomplete line in buffer
+      stderrBuffer = lines.pop();
+
+      for (const line of lines) {
+        if (line.startsWith('PROGRESS:')) {
+          try {
+            const jsonStr = line.substring(9); // Length of "PROGRESS:"
+            const progressData = JSON.parse(jsonStr);
+            if (mainWindow) {
+              mainWindow.webContents.send('analysis-progress', progressData);
+            }
+          } catch (e) {
+            console.error('Failed to parse progress JSON:', e);
+          }
+        }
+      }
     });
 
     childProcess.on('close', (code) => {
@@ -579,6 +616,36 @@ ipcMain.handle('ask-ai', async (event, message, filePath) => {
     console.error('AI Error:', err);
     throw err;
   }
+});
+
+ipcMain.handle('export-report', async (event, format, sourcePath, content) => {
+  const { filePath } = await dialog.showSaveDialog(mainWindow, {
+    title: '导出分析报告',
+    defaultPath: `report.${format}`,
+    filters: [
+      { name: format.toUpperCase(), extensions: [format] }
+    ]
+  });
+
+  if (!filePath) return false;
+
+  const fs = require('fs');
+  
+  try {
+    if (sourcePath) {
+      fs.copyFileSync(sourcePath, filePath);
+    } else if (content) {
+      fs.writeFileSync(filePath, content);
+    }
+    return true;
+  } catch (err) {
+    throw new Error(`Failed to save file: ${err.message}`);
+  }
+});
+
+ipcMain.handle('open-external', async (event, url) => {
+  const { shell } = require('electron');
+  await shell.openExternal(url);
 });
 
 ipcMain.handle('get-tcp-stream-packets', async (event, filePath, streamId, page) => {

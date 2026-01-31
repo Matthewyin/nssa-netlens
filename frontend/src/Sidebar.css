@@ -1,0 +1,69 @@
+.sidebar-bottom {
+  margin-top: auto;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+}
+
+.btn-github {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  width: 100%;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s;
+  border: none;
+  border-top: 1px solid var(--border-color);
+  background: transparent;
+  position: relative;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.btn-github:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.update-dot {
+  width: 8px;
+  height: 8px;
+  background-color: var(--accent-red);
+  border-radius: 50%;
+  margin-left: auto;
+}
+
+/* Override existing btn-settings to remove top margin if wrapped in sidebar-bottom */
+.sidebar-bottom .btn-settings {
+  margin-top: 0;
+  border-top: none;
+  justify-content: flex-start; /* Ensure left align */
+}
+
+/* Adjust sidebar collapsed state for new elements */
+.sidebar.collapsed .sidebar-bottom {
+  align-items: center;
+}
+
+.sidebar.collapsed .btn-github,
+.sidebar.collapsed .btn-settings {
+  justify-content: center;
+  padding: 14px 0;
+  width: 100%;
+}
+
+.sidebar.collapsed .btn-github span:not(.update-dot),
+.sidebar.collapsed .btn-settings span:not(:first-child) {
+  display: none;
+}
+
+.sidebar.collapsed .update-dot {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  margin: 0;
+}

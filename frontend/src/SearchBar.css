@@ -3,12 +3,13 @@
   display: flex;
   align-items: center;
   width: 100%;
-  margin-bottom: 20px;
   background: var(--bg-tertiary);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 10px 14px;
+  border-radius: 6px;
+  padding: 6px 10px;
   transition: all 0.2s ease;
+  height: 32px;
+  box-sizing: border-box;
 }
 
 .search-bar-container:focus-within {

@@ -12,7 +12,7 @@ import hashlib
 import re
 from collections import defaultdict
 from dataclasses import dataclass, field, asdict
-from typing import Any
+from typing import Any, Optional
 from .tshark import tshark
 
 
@@ -584,6 +584,7 @@ class LinkTracer:
         self,
         matches: list[tuple[SessionInfo, SessionInfo, float, str]],
         filepath: str = "",
+        file_mapping: Optional[dict[str, str]] = None,
         include_packets: bool = True,
     ) -> list[SessionChain]:
         """Build session chains from pairwise matches"""
@@ -660,7 +661,13 @@ class LinkTracer:
 
                 for key in sorted_keys:
                     s = session_map[key]
-                    file_path_for_packets = filepath if filepath else ""
+                    file_path_for_packets = (
+                        filepath
+                        if filepath
+                        else (
+                            file_mapping.get(s.file_source, "") if file_mapping else ""
+                        )
+                    )
 
                     forward_packets: list = []
                     if (
@@ -911,9 +918,13 @@ class LinkTracer:
             if key not in best_matches or conf > best_matches[key][2]:
                 best_matches[key] = match
 
-        # Build chains (disable packet details for multi-file - would need per-session file mapping)
+        # Build chains with file mapping for multi-file support
+        file_mapping = {"file1": file1, "file2": file2}
         chains = self._build_chains(
-            list(best_matches.values()), filepath="", include_packets=False
+            list(best_matches.values()),
+            filepath="",
+            file_mapping=file_mapping,
+            include_packets=True,
         )
 
         # Unmatched

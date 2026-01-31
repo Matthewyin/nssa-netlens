@@ -1,6 +1,6 @@
 {
   "name": "netlens",
-  "version": "0.2.6",
+  "version": "0.3.0",
   "description": "Network Traffic Analysis & Visualization Tool",
   "main": "electron/main.js",
   "scripts": {
@@ -24,6 +24,8 @@
     "openai": "^6.16.0",
     "react-markdown": "^10.1.0",
     "react-resizable-panels": "^4.5.4",
+    "react-virtualized-auto-sizer": "^2.0.2",
+    "react-window": "^2.2.5",
     "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
